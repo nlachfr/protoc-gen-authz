@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package protoc_gen_authz.api;
+
+option go_package = "github.com/Neakxs/protoc-gen-authz/api";
+
+import "google/protobuf/descriptor.proto";
+
+message AuthzOptions {
+    repeated string rules = 1;
+}
+
+extend google.protobuf.MethodOptions {
+    AuthzOptions authz = 13377;
+}
