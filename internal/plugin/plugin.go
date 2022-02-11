@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	"fmt"
+
 	"github.com/Neakxs/protoc-gen-authz/api"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
@@ -111,7 +113,7 @@ func unaryInterceptorSignature(g *protogen.GeneratedFile, service *protogen.Serv
 func generateInterceptors(g *protogen.GeneratedFile, service *protogen.Service, methods []*protogen.Method) {
 	g.P("var ", authzMapSignature(g, service), " {")
 	for _, method := range methods {
-		g.P(`	"`, method.Desc.FullName(), `": _`, method.Parent.GoName, `_`, method.GoName, `_AuthzBuilder,`)
+		g.P(`	"`, fmt.Sprintf("/%s/%s", method.Parent.Desc.FullName(), method.Desc.Name()), `": _`, method.Parent.GoName, `_`, method.GoName, `_AuthzBuilder,`)
 	}
 	g.P("}")
 	g.P()
@@ -134,7 +136,7 @@ func `, unaryInterceptorSignature(g, service), ` {
 		}
 	}
 	return func(ctx `, contextContext, `, req interface{}, info *`, grpcUnaryServerInfo, `, handler `, grpcUnaryHandler, `) (resp interface{}, err error) {
-		if pgr, ok := m[info.FullMethod]; ok {
+		if pgr, ok := m[info.FullMethod]; !ok {
 			return handler(ctx, req)
 		} else {
 			md, ok := `, metadataFromIncomingContext, `(ctx)
