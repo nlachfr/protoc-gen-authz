@@ -4,6 +4,9 @@ import (
 	"fmt"
 
 	"github.com/Neakxs/protoc-gen-authz/api"
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/checker/decls"
+	v1alpha1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoregistry"
@@ -31,6 +34,7 @@ func Run(gen *protogen.Plugin) error {
 			return err
 		}
 	}
+	celOpts := cel.TypeDescs(&files)
 	for _, file := range gen.Files {
 		if !file.Generate {
 			continue
@@ -39,7 +43,7 @@ func Run(gen *protogen.Plugin) error {
 		for _, svc := range file.Services {
 			m := []*protogen.Method{}
 			for _, mth := range svc.Methods {
-				if generateBuilder(g, mth) {
+				if generateBuilder(gen, celOpts, g, mth) {
 					m = append(m, mth)
 				}
 			}
@@ -64,10 +68,26 @@ func authzBuilderSignature(g *protogen.GeneratedFile, method *protogen.Method) s
 	return `_` + method.Parent.GoName + `_` + method.GoName + `_AuthzBuilder() (` + g.QualifiedGoIdent(celPackage.Ident("Program")) + `, error)`
 }
 
-func generateBuilder(g *protogen.GeneratedFile, method *protogen.Method) bool {
+func generateBuilder(gen *protogen.Plugin, celOpts cel.EnvOption, g *protogen.GeneratedFile, method *protogen.Method) bool {
 	rule := proto.GetExtension(method.Desc.Options(), api.E_AuthorizationRule).(string)
 	if rule == "" {
 		return false
+	} else {
+		env, err := cel.NewEnv(
+			celOpts,
+			cel.Declarations(
+				decls.NewVar("request", decls.NewObjectType(string(method.Input.Desc.FullName()))),
+				decls.NewVar("metadata", decls.NewMapType(&v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_STRING}}, decls.NewListType(&v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_STRING}}))),
+			),
+		)
+		if err != nil {
+			gen.Error(err)
+			return false
+		}
+		if _, issues := env.Compile(rule); issues != nil && issues.Err() != nil {
+			gen.Error(issues.Err())
+			return false
+		}
 	}
 	celNewEnv := g.QualifiedGoIdent(celPackage.Ident("NewEnv"))
 	celTypes := g.QualifiedGoIdent(celPackage.Ident("Types"))
