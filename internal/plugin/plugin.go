@@ -40,14 +40,8 @@ func Run(gen *protogen.Plugin) error {
 			continue
 		}
 		g := generateNewFile(gen, file)
-		for _, svc := range file.Services {
-			m := []*protogen.Method{}
-			for _, mth := range svc.Methods {
-				if generateBuilder(gen, celOpts, g, mth) {
-					m = append(m, mth)
-				}
-			}
-			generateInterceptors(g, svc, m)
+		for _, msg := range file.Messages {
+			generateMessageMethod(gen, celOpts, g, msg)
 		}
 	}
 	return nil
@@ -64,116 +58,159 @@ func generateNewFile(gen *protogen.Plugin, file *protogen.File) *protogen.Genera
 	return g
 }
 
-func authzBuilderSignature(g *protogen.GeneratedFile, method *protogen.Method) string {
-	return `_` + method.Parent.GoName + `_` + method.GoName + `_AuthzBuilder() (` + g.QualifiedGoIdent(celPackage.Ident("Program")) + `, error)`
-}
-
-func generateBuilder(gen *protogen.Plugin, celOpts cel.EnvOption, g *protogen.GeneratedFile, method *protogen.Method) bool {
-	rule := proto.GetExtension(method.Desc.Options(), api.E_AuthorizationRule).(string)
-	if rule == "" {
-		return false
+func generateMessageMethod(gen *protogen.Plugin, celOpts cel.EnvOption, g *protogen.GeneratedFile, message *protogen.Message) {
+	rule := proto.GetExtension(message.Desc.Options(), api.E_Rule).(*api.Rule)
+	g.P(
+		`func (m *` + message.GoIdent.GoName + `) Authorize(ctx ` + g.QualifiedGoIdent(contextPackage.Ident(`Context`)) + `) error {`,
+	)
+	if rule == nil || len(rule.Exprs) == 0 {
+		g.P(
+			`	return nil`,
+		)
 	} else {
 		env, err := cel.NewEnv(
-			celOpts,
+			cel.DeclareContextProto(message.Desc),
 			cel.Declarations(
-				decls.NewVar("request", decls.NewObjectType(string(method.Input.Desc.FullName()))),
-				decls.NewVar("metadata", decls.NewMapType(&v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_STRING}}, decls.NewListType(&v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_STRING}}))),
+				decls.NewVar(".md", decls.NewMapType(&v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_STRING}}, decls.NewListType(&v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_STRING}}))),
 			),
 		)
 		if err != nil {
 			gen.Error(err)
-			return false
+			return
 		}
-		if _, issues := env.Compile(rule); issues != nil && issues.Err() != nil {
-			gen.Error(issues.Err())
-			return false
+		for _, expr := range rule.Exprs {
+			ast, issues := env.Compile(expr)
+			if issues != nil && issues.Err() != nil {
+				gen.Error(issues.Err())
+				return
+			}
+			switch ast.ResultType().TypeKind.(type) {
+			case *v1alpha1.Type_Primitive:
+				if v1alpha1.Type_PrimitiveType(ast.ResultType().GetPrimitive().Number()) != v1alpha1.Type_BOOL {
+					gen.Error(fmt.Errorf("result type not bool"))
+					return
+				}
+			default:
+				gen.Error(fmt.Errorf("result type not bool"))
+				return
+			}
 		}
 	}
-	celNewEnv := g.QualifiedGoIdent(celPackage.Ident("NewEnv"))
-	celTypes := g.QualifiedGoIdent(celPackage.Ident("Types"))
-	celDeclarations := g.QualifiedGoIdent(celPackage.Ident("Declarations"))
-	declsNewVar := g.QualifiedGoIdent(declsPackage.Ident("NewVar"))
-	declsNewObjectType := g.QualifiedGoIdent(declsPackage.Ident("NewObjectType"))
-	declsNewMapType := g.QualifiedGoIdent(declsPackage.Ident("NewMapType"))
-	declsNewListType := g.QualifiedGoIdent(declsPackage.Ident("NewListType"))
-	exprType := g.QualifiedGoIdent(exprPackage.Ident("Type"))
-	exprTypePrimitive := g.QualifiedGoIdent(exprPackage.Ident("Type_Primitive"))
-	exprTypeString := g.QualifiedGoIdent(exprPackage.Ident("Type_STRING"))
-
-	g.P(`
-func `, authzBuilderSignature(g, method), ` {
-	env, err := `, celNewEnv, `(
-		`, celTypes, `(&`, g.QualifiedGoIdent(method.Input.GoIdent), `{}),
-		`, celDeclarations, `(
-			`, declsNewVar, `("request", `, declsNewObjectType, `("`, method.Input.Desc.FullName(), `")),
-			`, declsNewVar, `("metadata", `, declsNewMapType, `(&`, exprType, `{TypeKind: &`, exprTypePrimitive, `{Primitive: `, exprTypeString, `}}, `, declsNewListType, `(&`, exprType, `{TypeKind: &`, exprTypePrimitive, `{Primitive: `, exprTypeString, `}}))),
-		),
+	g.P(
+		`}`,
 	)
-	if err != nil {
-		return nil, err
-	}
-	ast, issues := env.Compile(`, "`", rule, "`", `)
-	if issues != nil && issues.Err() != nil {
-		return nil, issues.Err()
-	}
-	return env.Program(ast)
-}
-	`)
-	return true
 }
 
-func authzMapSignature(g *protogen.GeneratedFile, service *protogen.Service) string {
-	return "_" + service.GoName + "_Authz = map[string]func() (" + g.QualifiedGoIdent(celPackage.Ident("Program")) + ", error)"
-}
+// func authzBuilderSignature(g *protogen.GeneratedFile, method *protogen.Method) string {
+// 	return `_` + method.Parent.GoName + `_` + method.GoName + `_AuthzBuilder() (` + g.QualifiedGoIdent(celPackage.Ident("Program")) + `, error)`
+// }
 
-func unaryInterceptorSignature(g *protogen.GeneratedFile, service *protogen.Service) string {
-	return `New` + service.GoName + `AuthzUnaryServerInterceptor() (` + g.QualifiedGoIdent(grpcPackage.Ident("UnaryServerInterceptor")) + `, error)`
-}
+// func generateBuilder(gen *protogen.Plugin, celOpts cel.EnvOption, g *protogen.GeneratedFile, method *protogen.Method) bool {
+// 	rule := proto.GetExtension(method.Desc.Options(), api.E_AuthorizationRule).(string)
+// 	if rule == "" {
+// 		return false
+// 	} else {
+// 		env, err := cel.NewEnv(
+// 			celOpts,
+// 			cel.Declarations(
+// 				decls.NewVar("request", decls.NewObjectType(string(method.Input.Desc.FullName()))),
+// 				decls.NewVar("metadata", decls.NewMapType(&v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_STRING}}, decls.NewListType(&v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_STRING}}))),
+// 			),
+// 		)
+// 		if err != nil {
+// 			gen.Error(err)
+// 			return false
+// 		}
+// 		if _, issues := env.Compile(rule); issues != nil && issues.Err() != nil {
+// 			gen.Error(issues.Err())
+// 			return false
+// 		}
+// 	}
+// 	celNewEnv := g.QualifiedGoIdent(celPackage.Ident("NewEnv"))
+// 	celTypes := g.QualifiedGoIdent(celPackage.Ident("Types"))
+// 	celDeclarations := g.QualifiedGoIdent(celPackage.Ident("Declarations"))
+// 	declsNewVar := g.QualifiedGoIdent(declsPackage.Ident("NewVar"))
+// 	declsNewObjectType := g.QualifiedGoIdent(declsPackage.Ident("NewObjectType"))
+// 	declsNewMapType := g.QualifiedGoIdent(declsPackage.Ident("NewMapType"))
+// 	declsNewListType := g.QualifiedGoIdent(declsPackage.Ident("NewListType"))
+// 	exprType := g.QualifiedGoIdent(exprPackage.Ident("Type"))
+// 	exprTypePrimitive := g.QualifiedGoIdent(exprPackage.Ident("Type_Primitive"))
+// 	exprTypeString := g.QualifiedGoIdent(exprPackage.Ident("Type_STRING"))
 
-func generateInterceptors(g *protogen.GeneratedFile, service *protogen.Service, methods []*protogen.Method) {
-	g.P("var ", authzMapSignature(g, service), " {")
-	for _, method := range methods {
-		g.P(`	"`, fmt.Sprintf("/%s/%s", method.Parent.Desc.FullName(), method.Desc.Name()), `": _`, method.Parent.GoName, `_`, method.GoName, `_AuthzBuilder,`)
-	}
-	g.P("}")
-	g.P()
-	celProgram := g.QualifiedGoIdent(celPackage.Ident("Program"))
-	contextContext := g.QualifiedGoIdent(contextPackage.Ident("Context"))
-	grpcUnaryServerInfo := g.QualifiedGoIdent(grpcPackage.Ident("UnaryServerInfo"))
-	grpcUnaryHandler := g.QualifiedGoIdent(grpcPackage.Ident("UnaryHandler"))
-	metadataFromIncomingContext := g.QualifiedGoIdent(metadataPackage.Ident("FromIncomingContext"))
-	metadataNew := g.QualifiedGoIdent(metadataPackage.Ident("New"))
-	statusError := g.QualifiedGoIdent(statusPackage.Ident("Error"))
-	codesPermissionDenied := g.QualifiedGoIdent(codesPackage.Ident("PermissionDenied"))
-	g.P(`
-func `, unaryInterceptorSignature(g, service), ` {
-	m := map[string]`, celProgram, `{}
-	for k,v := range _`, service.GoName, `_Authz {
-		if pgr, err := v(); err == nil {
-			m[k] = pgr
-		} else {
-			return nil, err
-		}
-	}
-	return func(ctx `, contextContext, `, req interface{}, info *`, grpcUnaryServerInfo, `, handler `, grpcUnaryHandler, `) (resp interface{}, err error) {
-		if pgr, ok := m[info.FullMethod]; !ok {
-			return handler(ctx, req)
-		} else {
-			md, ok := `, metadataFromIncomingContext, `(ctx)
-			if !ok {
-				md = `, metadataNew, `(map[string]string{})
-			}
-			if val, _, err := pgr.Eval(map[string]interface{}{
-				"request": req,
-				"metadata": md,
-			}); err != nil {
-				return nil, err
-			} else if b, ok := val.Value().(bool); !ok || !b {
-				return nil, `, statusError, `(`, codesPermissionDenied, `, "Unauthorized")
-			}
-			return handler(ctx, req)
-		}
-	}, nil
-}
-	`)
-}
+// 	g.P(`
+// func `, authzBuilderSignature(g, method), ` {
+// 	env, err := `, celNewEnv, `(
+// 		`, celTypes, `(&`, g.QualifiedGoIdent(method.Input.GoIdent), `{}),
+// 		`, celDeclarations, `(
+// 			`, declsNewVar, `("request", `, declsNewObjectType, `("`, method.Input.Desc.FullName(), `")),
+// 			`, declsNewVar, `("metadata", `, declsNewMapType, `(&`, exprType, `{TypeKind: &`, exprTypePrimitive, `{Primitive: `, exprTypeString, `}}, `, declsNewListType, `(&`, exprType, `{TypeKind: &`, exprTypePrimitive, `{Primitive: `, exprTypeString, `}}))),
+// 		),
+// 	)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	ast, issues := env.Compile(`, "`", rule, "`", `)
+// 	if issues != nil && issues.Err() != nil {
+// 		return nil, issues.Err()
+// 	}
+// 	return env.Program(ast)
+// }
+// 	`)
+// 	return true
+// }
+
+// func authzMapSignature(g *protogen.GeneratedFile, service *protogen.Service) string {
+// 	return "_" + service.GoName + "_Authz = map[string]func() (" + g.QualifiedGoIdent(celPackage.Ident("Program")) + ", error)"
+// }
+
+// func unaryInterceptorSignature(g *protogen.GeneratedFile, service *protogen.Service) string {
+// 	return `New` + service.GoName + `AuthzUnaryServerInterceptor() (` + g.QualifiedGoIdent(grpcPackage.Ident("UnaryServerInterceptor")) + `, error)`
+// }
+
+// func generateInterceptors(g *protogen.GeneratedFile, service *protogen.Service, methods []*protogen.Method) {
+// 	g.P("var ", authzMapSignature(g, service), " {")
+// 	for _, method := range methods {
+// 		g.P(`	"`, fmt.Sprintf("/%s/%s", method.Parent.Desc.FullName(), method.Desc.Name()), `": _`, method.Parent.GoName, `_`, method.GoName, `_AuthzBuilder,`)
+// 	}
+// 	g.P("}")
+// 	g.P()
+// 	celProgram := g.QualifiedGoIdent(celPackage.Ident("Program"))
+// 	contextContext := g.QualifiedGoIdent(contextPackage.Ident("Context"))
+// 	grpcUnaryServerInfo := g.QualifiedGoIdent(grpcPackage.Ident("UnaryServerInfo"))
+// 	grpcUnaryHandler := g.QualifiedGoIdent(grpcPackage.Ident("UnaryHandler"))
+// 	metadataFromIncomingContext := g.QualifiedGoIdent(metadataPackage.Ident("FromIncomingContext"))
+// 	metadataNew := g.QualifiedGoIdent(metadataPackage.Ident("New"))
+// 	statusError := g.QualifiedGoIdent(statusPackage.Ident("Error"))
+// 	codesPermissionDenied := g.QualifiedGoIdent(codesPackage.Ident("PermissionDenied"))
+// 	g.P(`
+// func `, unaryInterceptorSignature(g, service), ` {
+// 	m := map[string]`, celProgram, `{}
+// 	for k,v := range _`, service.GoName, `_Authz {
+// 		if pgr, err := v(); err == nil {
+// 			m[k] = pgr
+// 		} else {
+// 			return nil, err
+// 		}
+// 	}
+// 	return func(ctx `, contextContext, `, req interface{}, info *`, grpcUnaryServerInfo, `, handler `, grpcUnaryHandler, `) (resp interface{}, err error) {
+// 		if pgr, ok := m[info.FullMethod]; !ok {
+// 			return handler(ctx, req)
+// 		} else {
+// 			md, ok := `, metadataFromIncomingContext, `(ctx)
+// 			if !ok {
+// 				md = `, metadataNew, `(map[string]string{})
+// 			}
+// 			if val, _, err := pgr.Eval(map[string]interface{}{
+// 				"request": req,
+// 				"metadata": md,
+// 			}); err != nil {
+// 				return nil, err
+// 			} else if b, ok := val.Value().(bool); !ok || !b {
+// 				return nil, `, statusError, `(`, codesPermissionDenied, `, "Unauthorized")
+// 			}
+// 			return handler(ctx, req)
+// 		}
+// 	}, nil
+// }
+// 	`)
+// }
