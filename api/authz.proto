@@ -7,5 +7,9 @@ option go_package = "github.com/Neakxs/protoc-gen-authz/api";
 import "google/protobuf/descriptor.proto";
 
 extend google.protobuf.MessageOptions {
-    repeated string rule = 13377;
+    Rule rule = 13377;
+}
+
+message Rule {
+    repeated string exprs = 1;
 }
