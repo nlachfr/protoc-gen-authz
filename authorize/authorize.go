@@ -33,7 +33,7 @@ func AuthorizationContextFromContext(ctx context.Context) *api.AuthorizationCont
 
 func BuildProgramVars(ctx context.Context, message proto.Message) interface{} {
 	res := map[string]interface{}{
-		".ctx": AuthorizationContextFromContext(ctx),
+		"_ctx": AuthorizationContextFromContext(ctx),
 	}
 	fields := message.ProtoReflect().Descriptor().Fields()
 	for i := 0; i < fields.Len(); i++ {

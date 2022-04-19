@@ -119,7 +119,7 @@ func generateGetProgram(gen *protogen.Plugin, g *protogen.GeneratedFile, message
 			cel.Types(&api.AuthorizationContext{}),
 			cel.DeclareContextProto(message.Desc),
 			cel.Declarations(
-				decls.NewVar(".ctx", decls.NewObjectType(string((&api.AuthorizationContext{}).ProtoReflect().Descriptor().FullName()))),
+				decls.NewVar("_ctx", decls.NewObjectType(string((&api.AuthorizationContext{}).ProtoReflect().Descriptor().FullName()))),
 			),
 		)
 		if err != nil {
@@ -160,7 +160,7 @@ func generateGetProgram(gen *protogen.Plugin, g *protogen.GeneratedFile, message
 			`			`, celTypes, `(&`, apiAuthorizationContext, `{}),`, "\n",
 			`			`, celDeclareContextProto, `((&`, message.GoIdent.GoName, `{}).ProtoReflect().Descriptor()),`, "\n",
 			`			`, celDeclarations, `(`, "\n",
-			`				`, declsNewVar, `(".ctx", `, declsNewObjectType, `(string((&`, apiAuthorizationContext, `{}).ProtoReflect().Descriptor().FullName()))),`, "\n",
+			`				`, declsNewVar, `("_ctx", `, declsNewObjectType, `(string((&`, apiAuthorizationContext, `{}).ProtoReflect().Descriptor().FullName()))),`, "\n",
 			`			),`, "\n",
 			`		)`, "\n",
 			`		ast, _ := env.Compile(`, "`", rule.Expr, "`", `)`, "\n",
