@@ -43,7 +43,7 @@ message DeleteUserRequest {
 }
 ```
 
-The authorization rule definied can then be checked against a given message by calling the corresponding `Authorize` method.
+The defined authorization rule can then be checked against a given message by calling the corresponding `Authorize` method.
 
 ```go
 func (m *CreateUserRequest) Authorize(ctx context.Context) error
