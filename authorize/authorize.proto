@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package neakxs.grpc.authz;
+package neakxs.authorize;
 
-option go_package = "github.com/Neakxs/protoc-gen-authz/api";
+option go_package = "github.com/Neakxs/protoc-gen-authz/authorize";
 
 import "google/protobuf/descriptor.proto";
 

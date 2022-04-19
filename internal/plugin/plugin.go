@@ -3,7 +3,7 @@ package plugin
 import (
 	"fmt"
 
-	"github.com/Neakxs/protoc-gen-authz/api"
+	"github.com/Neakxs/protoc-gen-authz/authorize"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/checker/decls"
 	"github.com/google/cel-go/interpreter"
@@ -13,12 +13,11 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
-const PluginName = "protoc-gen-go-grpc-authz"
+const PluginName = "protoc-gen-go-authorize"
 
 const generatedFilenameSuffix = "_grpc_authz.pb.go"
 
 const (
-	apiPackage         = protogen.GoImportPath("github.com/Neakxs/protoc-gen-authz/api")
 	authorizePackage   = protogen.GoImportPath("github.com/Neakxs/protoc-gen-authz/authorize")
 	contextPackage     = protogen.GoImportPath("context")
 	celPackage         = protogen.GoImportPath("github.com/google/cel-go/cel")
@@ -107,7 +106,7 @@ func buildGetProgramSignatureDef(g *protogen.GeneratedFile, message *protogen.Me
 }
 
 func generateGetProgram(gen *protogen.Plugin, g *protogen.GeneratedFile, message *protogen.Message) bool {
-	rule := proto.GetExtension(message.Desc.Options(), api.E_Rule).(*api.Rule)
+	rule := proto.GetExtension(message.Desc.Options(), authorize.E_Rule).(*authorize.Rule)
 	if rule == nil || len(rule.Expr) == 0 {
 		return false
 	} else {
@@ -116,10 +115,10 @@ func generateGetProgram(gen *protogen.Plugin, g *protogen.GeneratedFile, message
 			buildGetProgramSignatureDef(g, message), `{`,
 		)
 		env, err := cel.NewEnv(
-			cel.Types(&api.AuthorizationContext{}),
+			cel.Types(&authorize.AuthorizationContext{}),
 			cel.DeclareContextProto(message.Desc),
 			cel.Declarations(
-				decls.NewVar("_ctx", decls.NewObjectType(string((&api.AuthorizationContext{}).ProtoReflect().Descriptor().FullName()))),
+				decls.NewVar("_ctx", decls.NewObjectType(string((&authorize.AuthorizationContext{}).ProtoReflect().Descriptor().FullName()))),
 			),
 		)
 		if err != nil {
@@ -145,7 +144,7 @@ func generateGetProgram(gen *protogen.Plugin, g *protogen.GeneratedFile, message
 		if err != nil {
 			gen.Error(err)
 		}
-		apiAuthorizationContext := g.QualifiedGoIdent(apiPackage.Ident("AuthorizationContext"))
+		authorizeAuthorizationContext := g.QualifiedGoIdent(authorizePackage.Ident("AuthorizationContext"))
 		celNewEnv := g.QualifiedGoIdent(celPackage.Ident("NewEnv"))
 		celTypes := g.QualifiedGoIdent(celPackage.Ident("Types"))
 		celDeclarations := g.QualifiedGoIdent(celPackage.Ident("Declarations"))
@@ -157,10 +156,10 @@ func generateGetProgram(gen *protogen.Plugin, g *protogen.GeneratedFile, message
 		g.P(
 			`	if `, programVarName(message), ` == nil {`, "\n",
 			`		env, _ := `, celNewEnv, `(`, "\n",
-			`			`, celTypes, `(&`, apiAuthorizationContext, `{}),`, "\n",
+			`			`, celTypes, `(&`, authorizeAuthorizationContext, `{}),`, "\n",
 			`			`, celDeclareContextProto, `((&`, message.GoIdent.GoName, `{}).ProtoReflect().Descriptor()),`, "\n",
 			`			`, celDeclarations, `(`, "\n",
-			`				`, declsNewVar, `("_ctx", `, declsNewObjectType, `(string((&`, apiAuthorizationContext, `{}).ProtoReflect().Descriptor().FullName()))),`, "\n",
+			`				`, declsNewVar, `("_ctx", `, declsNewObjectType, `(string((&`, authorizeAuthorizationContext, `{}).ProtoReflect().Descriptor().FullName()))),`, "\n",
 			`			),`, "\n",
 			`		)`, "\n",
 			`		ast, _ := env.Compile(`, "`", rule.Expr, "`", `)`, "\n",

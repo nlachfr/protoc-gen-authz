@@ -3,19 +3,18 @@ package authorize
 import (
 	"context"
 
-	"github.com/Neakxs/protoc-gen-authz/api"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 )
 
-func AuthorizationContextFromContext(ctx context.Context) *api.AuthorizationContext {
-	res := &api.AuthorizationContext{
-		Peer: &api.AuthorizationContext_Peer{
+func AuthorizationContextFromContext(ctx context.Context) *AuthorizationContext {
+	res := &AuthorizationContext{
+		Peer: &AuthorizationContext_Peer{
 			Addr:     "",
 			AuthInfo: "",
 		},
-		Metadata: make(map[string]*api.AuthorizationContext_MetadataValue),
+		Metadata: make(map[string]*AuthorizationContext_MetadataValue),
 	}
 	if p, ok := peer.FromContext(ctx); ok {
 		res.Peer.Addr = p.Addr.String()
@@ -23,7 +22,7 @@ func AuthorizationContextFromContext(ctx context.Context) *api.AuthorizationCont
 	}
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		for k, v := range md {
-			res.Metadata[k] = &api.AuthorizationContext_MetadataValue{
+			res.Metadata[k] = &AuthorizationContext_MetadataValue{
 				Values: v,
 			}
 		}

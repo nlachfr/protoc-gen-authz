@@ -4,7 +4,7 @@ SHELL := env PATH=$(PATH) /bin/bash
 
 PROTOC_GEN_GO := $(GOPATH)/bin/protoc-gen-go
 
-PROTO := $(shell find api -name '*.proto')
+PROTO := $(shell find authorize -name '*.proto')
 GENPROTO_GO := $(PROTO:.proto=.pb.go)
 
 .PHONY: all
