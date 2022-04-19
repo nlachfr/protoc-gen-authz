@@ -13,9 +13,9 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
-const PluginName = "protoc-gen-go-authorize"
+const PluginName = "protoc-gen-go-authz"
 
-const generatedFilenameSuffix = "_grpc_authz.pb.go"
+const generatedFilenameSuffix = ".pb.authz.go"
 
 const (
 	authorizePackage   = protogen.GoImportPath("github.com/Neakxs/protoc-gen-authz/authorize")
