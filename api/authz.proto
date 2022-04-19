@@ -13,3 +13,15 @@ extend google.protobuf.MessageOptions {
 message Rule {
     repeated string exprs = 1;
 }
+
+message AuthorizationContext {
+    message Peer {
+        string addr = 1;
+        string auth_info = 2;
+    }
+    message MetadataValue {
+        repeated string values = 1;
+    }
+    Peer peer = 1;
+    map<string,MetadataValue> metadata = 2;
+}
