@@ -11,7 +11,7 @@ extend google.protobuf.MessageOptions {
 }
 
 message Rule {
-    repeated string exprs = 1;
+    string expr = 1;
 }
 
 message AuthorizationContext {
