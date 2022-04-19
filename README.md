@@ -41,11 +41,6 @@ message DeleteUserRequest {
     option (neakxs.authz.rule).expr = '"X-Role" in _ctx.metadata && "admin" in _ctx.metadata["X-Role"].values';
     string name = 1;
 }
-
-message TestRpcRequest {
-    option (neakxs.authz.rule).expr = 'name in _ctx.metadata["x-name"].values';
-    string name = 1;
-}
 ```
 
 The authorization rule definied can then be checked against a given message by calling the corresponding `Authorize` method.
