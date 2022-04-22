@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/Neakxs/protoc-gen-authz/authorize"
@@ -27,24 +28,28 @@ const (
 	statusPackage      = protogen.GoImportPath("google.golang.org/grpc/status")
 )
 
-func Run(gen *protogen.Plugin) error {
-	var files protoregistry.Files
-	for _, file := range gen.Files {
-		if err := files.RegisterFile(file.Desc); err != nil {
-			return err
+func Run() {
+	protogen.Options{
+		ParamFunc: flag.CommandLine.Set,
+	}.Run(func(gen *protogen.Plugin) error {
+		var files protoregistry.Files
+		for _, file := range gen.Files {
+			if err := files.RegisterFile(file.Desc); err != nil {
+				return err
+			}
 		}
-	}
-	celOpts := cel.TypeDescs(&files)
-	for _, file := range gen.Files {
-		if !file.Generate {
-			continue
+		celOpts := cel.TypeDescs(&files)
+		for _, file := range gen.Files {
+			if !file.Generate {
+				continue
+			}
+			g := generateNewFile(gen, file)
+			for _, msg := range file.Messages {
+				generateMessageMethod(gen, celOpts, g, msg)
+			}
 		}
-		g := generateNewFile(gen, file)
-		for _, msg := range file.Messages {
-			generateMessageMethod(gen, celOpts, g, msg)
-		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func generateNewFile(gen *protogen.Plugin, file *protogen.File) *protogen.GeneratedFile {
