@@ -158,7 +158,7 @@ func generateGetProgram(c *cfg.Config, gen *protogen.Plugin, g *protogen.Generat
 			),
 		}
 		testEnvOpts := baseEnvOpts
-		for k, _ := range c.Globals.Functions {
+		for k := range c.Globals.Functions {
 			testEnvOpts = append(testEnvOpts, cel.Declarations(decls.NewFunction(k, decls.NewOverload(k, []*v1alpha1.Type{}, &v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_BOOL}}))))
 		}
 		testEnv, err := cel.NewEnv(testEnvOpts...)

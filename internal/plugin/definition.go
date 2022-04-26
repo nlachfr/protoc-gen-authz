@@ -12,7 +12,7 @@ func findMacrosInAST(ast *cel.Ast, m map[string]string) []string {
 		mm[i] = true
 	}
 	s = []string{}
-	for k, _ := range mm {
+	for k := range mm {
 		s = append(s, k)
 	}
 	return s
