@@ -3,8 +3,10 @@ package plugin
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/Neakxs/protoc-gen-authz/authorize"
+	"github.com/Neakxs/protoc-gen-authz/internal/cfg"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/checker/decls"
 	"github.com/google/cel-go/interpreter"
@@ -12,6 +14,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"gopkg.in/yaml.v2"
 )
 
 const PluginName = "protoc-gen-go-authz"
@@ -24,28 +27,43 @@ const (
 	celPackage         = protogen.GoImportPath("github.com/google/cel-go/cel")
 	declsPackage       = protogen.GoImportPath("github.com/google/cel-go/checker/decls")
 	interpreterPackage = protogen.GoImportPath("github.com/google/cel-go/interpreter")
+	parserPackage      = protogen.GoImportPath("github.com/google/cel-go/parser")
 	codesPackage       = protogen.GoImportPath("google.golang.org/grpc/codes")
 	statusPackage      = protogen.GoImportPath("google.golang.org/grpc/status")
+)
+
+var (
+	config = flag.String("config", "", "global configuration file")
 )
 
 func Run() {
 	protogen.Options{
 		ParamFunc: flag.CommandLine.Set,
 	}.Run(func(gen *protogen.Plugin) error {
+		c := cfg.Config{}
+		if config != nil {
+			b, err := os.ReadFile(*config)
+			if err != nil {
+				return err
+			}
+			if err := yaml.Unmarshal(b, &c); err != nil {
+				return err
+			}
+		}
 		var files protoregistry.Files
 		for _, file := range gen.Files {
 			if err := files.RegisterFile(file.Desc); err != nil {
 				return err
 			}
 		}
-		celOpts := cel.TypeDescs(&files)
 		for _, file := range gen.Files {
 			if !file.Generate {
 				continue
 			}
 			g := generateNewFile(gen, file)
+			generateGlobals(&c, g, file)
 			for _, msg := range file.Messages {
-				generateMessageMethod(gen, celOpts, g, msg)
+				generateMessageMethod(&c, gen, g, file, msg)
 			}
 		}
 		return nil
@@ -63,8 +81,20 @@ func generateNewFile(gen *protogen.Plugin, file *protogen.File) *protogen.Genera
 	return g
 }
 
-func generateMessageMethod(gen *protogen.Plugin, celOpts cel.EnvOption, g *protogen.GeneratedFile, message *protogen.Message) {
-	ok := generateGetProgram(gen, g, message)
+func globalFunctionsVarName(file *protogen.File) string {
+	return `_` + string(file.GoDescriptorIdent.GoName) + `_globalFunctions`
+}
+
+func generateGlobals(c *cfg.Config, g *protogen.GeneratedFile, file *protogen.File) {
+	g.P(`var `, globalFunctionsVarName(file), ` map[string]string = map[string]string{`)
+	for k, v := range c.Globals.Functions {
+		g.P(`	"`, k, `":`, "`", v, "`,")
+	}
+	g.P(`}`)
+}
+
+func generateMessageMethod(c *cfg.Config, gen *protogen.Plugin, g *protogen.GeneratedFile, file *protogen.File, message *protogen.Message) {
+	ok := generateGetProgram(c, gen, g, file, message)
 	g.P(
 		"\n", `func (m *`+message.GoIdent.GoName+`) Authorize(ctx `+g.QualifiedGoIdent(contextPackage.Ident(`Context`))+`) error {`,
 	)
@@ -110,7 +140,7 @@ func buildGetProgramSignatureDef(g *protogen.GeneratedFile, message *protogen.Me
 	return `func ` + buildGetProgramSignature(g, message) + `() (` + g.QualifiedGoIdent(celPackage.Ident("Program")) + `, error)`
 }
 
-func generateGetProgram(gen *protogen.Plugin, g *protogen.GeneratedFile, message *protogen.Message) bool {
+func generateGetProgram(c *cfg.Config, gen *protogen.Plugin, g *protogen.GeneratedFile, file *protogen.File, message *protogen.Message) bool {
 	rule := proto.GetExtension(message.Desc.Options(), authorize.E_Rule).(*authorize.Rule)
 	if rule == nil || len(rule.Expr) == 0 {
 		return false
@@ -119,13 +149,39 @@ func generateGetProgram(gen *protogen.Plugin, g *protogen.GeneratedFile, message
 			`var `, programVarName(message), ` `, g.QualifiedGoIdent(celPackage.Ident("Program")), ` = nil`, "\n",
 			buildGetProgramSignatureDef(g, message), `{`,
 		)
-		env, err := cel.NewEnv(
+		defer g.P(`}`)
+		baseEnvOpts := []cel.EnvOption{
 			cel.Types(&authorize.AuthorizationContext{}),
 			cel.DeclareContextProto(message.Desc),
 			cel.Declarations(
 				decls.NewVar("_ctx", decls.NewObjectType(string((&authorize.AuthorizationContext{}).ProtoReflect().Descriptor().FullName()))),
 			),
-		)
+		}
+		testEnvOpts := baseEnvOpts
+		for k, _ := range c.Globals.Functions {
+			testEnvOpts = append(testEnvOpts, cel.Declarations(decls.NewFunction(k, decls.NewOverload(k, []*v1alpha1.Type{}, &v1alpha1.Type{TypeKind: &v1alpha1.Type_Primitive{Primitive: v1alpha1.Type_BOOL}}))))
+		}
+		testEnv, err := cel.NewEnv(testEnvOpts...)
+		if err != nil {
+			gen.Error(err)
+			return false
+		}
+		testAst, issues := testEnv.Compile(rule.Expr)
+		if issues != nil && issues.Err() != nil {
+			gen.Error(issues.Err())
+			return false
+		}
+		macros := findMacrosInAST(testAst, c.Globals.Functions)
+		macroMap := map[string]string{}
+		for _, macro := range macros {
+			macroMap[macro] = c.Globals.Functions[macro]
+		}
+		envOpts, err := authorize.BuildEnvOptionsWithMacros(baseEnvOpts, macroMap)
+		if err != nil {
+			gen.Error(err)
+			return false
+		}
+		env, err := cel.NewEnv(envOpts...)
 		if err != nil {
 			gen.Error(err)
 			return false
@@ -148,33 +204,44 @@ func generateGetProgram(gen *protogen.Plugin, g *protogen.GeneratedFile, message
 		_, err = env.Program(ast, cel.OptimizeRegex(interpreter.MatchesRegexOptimization))
 		if err != nil {
 			gen.Error(err)
+			return false
 		}
 		authorizeAuthorizationContext := g.QualifiedGoIdent(authorizePackage.Ident("AuthorizationContext"))
+		authorizeBuildEnvOptionsWithMacros := g.QualifiedGoIdent(authorizePackage.Ident("BuildEnvOptionsWithMacros"))
 		celNewEnv := g.QualifiedGoIdent(celPackage.Ident("NewEnv"))
 		celTypes := g.QualifiedGoIdent(celPackage.Ident("Types"))
+		celEnvOption := g.QualifiedGoIdent(celPackage.Ident("EnvOption"))
 		celDeclarations := g.QualifiedGoIdent(celPackage.Ident("Declarations"))
 		celDeclareContextProto := g.QualifiedGoIdent(celPackage.Ident("DeclareContextProto"))
 		celOptimizeRegex := g.QualifiedGoIdent(celPackage.Ident("OptimizeRegex"))
 		declsNewVar := g.QualifiedGoIdent(declsPackage.Ident("NewVar"))
 		declsNewObjectType := g.QualifiedGoIdent(declsPackage.Ident("NewObjectType"))
 		interpreterMatchesRegexOptimization := g.QualifiedGoIdent(interpreterPackage.Ident("MatchesRegexOptimization"))
-		g.P(
-			`	if `, programVarName(message), ` == nil {`, "\n",
-			`		env, _ := `, celNewEnv, `(`, "\n",
-			`			`, celTypes, `(&`, authorizeAuthorizationContext, `{}),`, "\n",
-			`			`, celDeclareContextProto, `((&`, message.GoIdent.GoName, `{}).ProtoReflect().Descriptor()),`, "\n",
-			`			`, celDeclarations, `(`, "\n",
-			`				`, declsNewVar, `("_ctx", `, declsNewObjectType, `(string((&`, authorizeAuthorizationContext, `{}).ProtoReflect().Descriptor().FullName()))),`, "\n",
-			`			),`, "\n",
-			`		)`, "\n",
-			`		ast, _ := env.Compile(`, "`", rule.Expr, "`", `)`, "\n",
-			`		`, programVarName(message), `, _ = env.Program(ast, `, celOptimizeRegex, `(`, interpreterMatchesRegexOptimization, `)`, `)`, "\n",
-			`	}`, "\n",
-			`	return `, programVarName(message), `, nil`,
-		)
-		g.P(
-			`}`,
-		)
+		g.P(`	if `, programVarName(message), ` == nil {`)
+		g.P(`		baseEnvOpts := []`, celEnvOption, `{`)
+		g.P(`			`, celTypes, `(&`, authorizeAuthorizationContext, `{}),`)
+		g.P(`			`, celDeclareContextProto, `((&`, message.GoIdent.GoName, `{}).ProtoReflect().Descriptor()),`)
+		g.P(`			`, celDeclarations, `(`)
+		g.P(`				`, declsNewVar, `("_ctx", `, declsNewObjectType, `(string((&`, authorizeAuthorizationContext, `{}).ProtoReflect().Descriptor().FullName()))),`)
+		g.P(`			),`)
+		g.P(`		}`)
+		if len(macros) > 0 {
+			g.P(`		envOpts, err := `, authorizeBuildEnvOptionsWithMacros, `(baseEnvOpts, map[string]string{`)
+			for _, macro := range macros {
+				g.P(`			"`, macro, `": `, globalFunctionsVarName(file), `["`, macro, `"],`)
+			}
+			g.P(`		})`)
+			g.P(`		if err != nil {`)
+			g.P(`			return nil, err`)
+			g.P(`		}`)
+		} else {
+			g.P(`		envOpts := baseEnvOpts`)
+		}
+		g.P(`		env, _ := `, celNewEnv, `(envOpts...)`)
+		g.P(`		ast, _ := env.Compile(`, "`", rule.Expr, "`", `)`)
+		g.P(`		`, programVarName(message), `, _ = env.Program(ast, `, celOptimizeRegex, `(`, interpreterMatchesRegexOptimization, `)`, `)`)
+		g.P(`	}`)
+		g.P(`	return `, programVarName(message), `, nil`)
 	}
 	return true
 }
