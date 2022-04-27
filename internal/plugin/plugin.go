@@ -86,6 +86,12 @@ func globalFunctionsVarName(file *protogen.File) string {
 }
 
 func generateGlobals(c *cfg.Config, g *protogen.GeneratedFile, file *protogen.File) {
+	globals := proto.GetExtension(file.Desc.Options(), authorize.E_Globals).(*authorize.Globals)
+	if globals != nil && len(globals.Functions) > 0 {
+		for k, v := range globals.Functions {
+			c.Globals.Functions[k] = v
+		}
+	}
 	g.P(`var `, globalFunctionsVarName(file), ` map[string]string = map[string]string{`)
 	for k, v := range c.Globals.Functions {
 		g.P(`	"`, k, `":`, "`", v, "`,")
