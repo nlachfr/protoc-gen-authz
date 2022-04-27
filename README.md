@@ -72,3 +72,20 @@ func (*orgServiceServer) Ping(ctx context.Context, in *v1.PingRequest) (*v1.Ping
 ```
 
 4. Profit
+
+## Configuration
+
+It is possible to use a configuration file for defining global functions across all your proto definitions.
+
+With the example above, we can create a `config.yml` file :
+
+```yaml
+version: v1
+globals:
+  functions:
+    isAdmin: "x-admin" in _ctx.metadata
+```
+
+You can then use it with the `--go-authz_opt=config=path/to/config.yml` option.
+
+> When the same function is defined inside a protobuf file and in the configuration, the protobuf one is used.
