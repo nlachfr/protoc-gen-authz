@@ -85,7 +85,7 @@ func _Get_{{.Source.GoIdent.GoName}}_celProgram() ({{.QualifiedGoIdent (celIdent
 			}
 			envOpts, err := {{.QualifiedGoIdent (authorizeIdent "BuildEnvOptionsWithMacros")}}(baseEnvOpts, map[string]string{
 			{{range $key, $value := .Macros}}
-				"$value": _{{.Source.GoDescriptorIdent.GoName}}_globalFunctions["$value"],
+				"{{$value}}": _{{$.Parent.GoDescriptorIdent.GoName}}_globalFunctions["{{$value}}"],
 			{{end}}
 			})
 			if err != nil {
@@ -159,7 +159,7 @@ func (f *file) Generate() error {
 		return err
 	}
 	for i := 0; i < len(f.Source.Messages); i++ {
-		if err := NewMessage(f.Plugin, f.GeneratedFile, f.Configuration, f.Source.Messages[i]).Generate(); err != nil {
+		if err := NewMessage(f.Plugin, f.GeneratedFile, f.Configuration, f.Source, f.Source.Messages[i]).Generate(); err != nil {
 			f.Plugin.Error(err)
 			return err
 		}
@@ -167,11 +167,12 @@ func (f *file) Generate() error {
 	return nil
 }
 
-func NewMessage(p *protogen.Plugin, g *protogen.GeneratedFile, c *cfg.Config, m *protogen.Message) *message {
+func NewMessage(p *protogen.Plugin, g *protogen.GeneratedFile, c *cfg.Config, f *protogen.File, m *protogen.Message) *message {
 	return &message{
 		Plugin:        p,
 		GeneratedFile: g,
 		Configuration: c,
+		Parent:        f,
 		Source:        m,
 		Rule:          proto.GetExtension(m.Desc.Options(), authorize.E_Rule).(*authorize.Rule),
 	}
@@ -182,6 +183,7 @@ type message struct {
 	*protogen.GeneratedFile
 
 	Configuration *cfg.Config
+	Parent        *protogen.File
 	Source        *protogen.Message
 	Macros        []string
 	Rule          *authorize.Rule
@@ -237,6 +239,7 @@ func (m *message) Generate() error {
 		if err != nil {
 			return err
 		}
+		m.Macros = macros
 	}
 	if err := messageAuthorizeTemplate.Execute(m, m); err != nil {
 		return err
