@@ -12,8 +12,6 @@ import (
 
 const PluginName = "protoc-gen-go-authz"
 
-const generatedFilenameSuffix = ".pb.authz.go"
-
 var PluginVersion = "0.0.0"
 
 var (
@@ -44,7 +42,7 @@ func Run() {
 			if !file.Generate {
 				continue
 			}
-			if err := NewFile(gen, gen.NewGeneratedFile(file.GeneratedFilenamePrefix+generatedFilenameSuffix, file.GoImportPath), &c, file).Generate(); err != nil {
+			if err := NewFile(gen, file, &c).Generate(); err != nil {
 				return err
 			}
 		}
