@@ -15,7 +15,7 @@ import (
 )
 
 func NewFile(p *protogen.Plugin, f *protogen.File, c *cfg.Config) *File {
-	g := p.NewGeneratedFile(f.GeneratedFilenamePrefix+".pb.cel.authz.go", f.GoImportPath)
+	g := p.NewGeneratedFile(f.GeneratedFilenamePrefix+".pb.authz.go", f.GoImportPath)
 	msgs := []*Message{}
 	for i := 0; i < len(f.Messages); i++ {
 		msgs = append(msgs, NewMessage(f.Messages[i], c))

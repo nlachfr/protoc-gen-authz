@@ -12,8 +12,6 @@ import (
 
 const PluginName = "protoc-gen-go-authz"
 
-const generatedFilenameSuffix = ".pb.authz.go"
-
 var PluginVersion = "0.0.0"
 
 var (
