@@ -39,7 +39,17 @@ var (
 {{ if $m.MessageRule -}}
 // Authorize checks if the given message should be authorized in the current context.
 // Used expr :
-//     {{$m.MessageRule.Expr}}
+//     `{{$m.MessageRule.Expr}}`
+{{ if (gt (len $m.Macros) 0) -}}
+// With :
+{{ range $macro := $m.Macros -}}
+{{ range $name, $value := $m.Config.Globals.Functions -}}
+{{ if (eq $name $macro) -}}
+//     - {{$name}}: `{{$value}}`
+{{- end}}
+{{- end}}
+{{- end}}
+{{- end}}
 {{- end}}
 func (m *{{.GoIdent.GoName}}) Authorize(ctx {{ context "Context" }}) error {
 {{ if $m.MessageRule -}}
