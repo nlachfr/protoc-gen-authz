@@ -62,50 +62,44 @@ func (m *{{.Source.GoIdent.GoName}}) Authorize(ctx {{.QualifiedGoIdent (contextI
 }
 {{else}}
 var (
-	_{{.Source.GoIdent.GoName}}_mutex {{.QualifiedGoIdent (syncIdent "RWMutex")}} = {{.QualifiedGoIdent (syncIdent "RWMutex")}}{}
+	_{{.Source.GoIdent.GoName}}_celOnce {{.QualifiedGoIdent (syncIdent "Once")}} = {{.QualifiedGoIdent (syncIdent "Once")}}{}
 	_{{.Source.GoIdent.GoName}}_celProgram {{.QualifiedGoIdent (celIdent "Program")}} = nil
 )
 
 func _Get_{{.Source.GoIdent.GoName}}_celProgram() ({{.QualifiedGoIdent (celIdent "Program")}}, error) {
-	_{{.Source.GoIdent.GoName}}_mutex.RLock()
-	if _{{.Source.GoIdent.GoName}}_celProgram == nil {
-		_{{.Source.GoIdent.GoName}}_mutex.RUnlock()
-		_{{.Source.GoIdent.GoName}}_mutex.Lock()
-		defer _{{.Source.GoIdent.GoName}}_mutex.Unlock()
-		if _{{.Source.GoIdent.GoName}}_celProgram == nil {
-			baseEnvOpts := []{{.QualifiedGoIdent (celIdent "EnvOption")}}{
-				{{.QualifiedGoIdent (celIdent "Types")}}(&{{.QualifiedGoIdent (authorizeIdent "AuthorizationContext")}}{}),
-				{{.QualifiedGoIdent (celIdent "DeclareContextProto")}}((&{{.Source.GoIdent.GoName}}{}).ProtoReflect().Descriptor()),
-				{{.QualifiedGoIdent (celIdent "Declarations")}}(
-					{{.QualifiedGoIdent (declsIdent "NewVar")}}(
-						"_ctx", 
-						{{.QualifiedGoIdent (declsIdent "NewObjectType")}}(string((&{{.QualifiedGoIdent (authorizeIdent "AuthorizationContext")}}{}).ProtoReflect().Descriptor().FullName())),
-					),
+	_{{.Source.GoIdent.GoName}}_celOnce.Do(func() {
+		baseEnvOpts := []{{.QualifiedGoIdent (celIdent "EnvOption")}}{
+			{{.QualifiedGoIdent (celIdent "Types")}}(&{{.QualifiedGoIdent (authorizeIdent "AuthorizationContext")}}{}),
+			{{.QualifiedGoIdent (celIdent "DeclareContextProto")}}((&{{.Source.GoIdent.GoName}}{}).ProtoReflect().Descriptor()),
+			{{.QualifiedGoIdent (celIdent "Declarations")}}(
+				{{.QualifiedGoIdent (declsIdent "NewVar")}}(
+					"_ctx", 
+					{{.QualifiedGoIdent (declsIdent "NewObjectType")}}(string((&{{.QualifiedGoIdent (authorizeIdent "AuthorizationContext")}}{}).ProtoReflect().Descriptor().FullName())),
 				),
-			}
-			envOpts, err := {{.QualifiedGoIdent (authorizeIdent "BuildEnvOptionsWithMacros")}}(baseEnvOpts, map[string]string{
-			{{range $key, $value := .Macros}}
-				"{{$value}}": _{{$.Parent.GoDescriptorIdent.GoName}}_globalFunctions["{{$value}}"],
-			{{end}}
-			})
-			if err != nil {
-				return nil, err
-			}
-			env, err := {{.QualifiedGoIdent (celIdent "NewEnv")}}(envOpts...)
-			if err != nil {
-				return nil, err
-			}
-			ast, issues := env.Compile(` + "`" + `{{.Rule.Expr}}` + "`" + `)
-			if issues != nil && issues.Err() != nil {
-				return nil, issues.Err()
-			}
-			pgr, err := env.Program(ast, {{.QualifiedGoIdent (celIdent "OptimizeRegex")}}({{.QualifiedGoIdent (interpreterIdent "MatchesRegexOptimization")}}))
-			if err != nil {
-				return nil, err
-			}
-			_{{.Source.GoIdent.GoName}}_celProgram = pgr
+			),
 		}
-	}
+		envOpts, err := {{.QualifiedGoIdent (authorizeIdent "BuildEnvOptionsWithMacros")}}(baseEnvOpts, map[string]string{
+		{{range $key, $value := .Macros}}
+			"{{$value}}": _{{$.Parent.GoDescriptorIdent.GoName}}_globalFunctions["{{$value}}"],
+		{{end}}
+		})
+		if err != nil {
+			return
+		}
+		env, err := {{.QualifiedGoIdent (celIdent "NewEnv")}}(envOpts...)
+		if err != nil {
+			return
+		}
+		ast, issues := env.Compile(` + "`" + `{{.Rule.Expr}}` + "`" + `)
+		if issues != nil && issues.Err() != nil {
+			return
+		}
+		pgr, err := env.Program(ast, {{.QualifiedGoIdent (celIdent "OptimizeRegex")}}({{.QualifiedGoIdent (interpreterIdent "MatchesRegexOptimization")}}))
+		if err != nil {
+			return
+		}
+		_{{.Source.GoIdent.GoName}}_celProgram = pgr
+	})
 	return _{{.Source.GoIdent.GoName}}_celProgram, nil
 }
 
