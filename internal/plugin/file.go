@@ -9,15 +9,15 @@ import (
 
 func NewFile(p *protogen.Plugin, f *protogen.File, c *authorize.FileRule) *File {
 	g := p.NewGeneratedFile(f.GeneratedFilenamePrefix+".pb.authz.go", f.GoImportPath)
-	svcs := []*Service{}
-	for i := 0; i < len(f.Services); i++ {
-		svcs = append(svcs, NewService(f.Services[i], c))
-	}
 	cfg := &authorize.FileRule{}
 	proto.Merge(cfg, c)
 	fileRule := proto.GetExtension(f.Desc.Options(), authorize.E_File).(*authorize.FileRule)
 	if fileRule != nil {
 		proto.Merge(cfg, fileRule)
+	}
+	svcs := []*Service{}
+	for i := 0; i < len(f.Services); i++ {
+		svcs = append(svcs, NewService(f.Services[i], cfg))
 	}
 	return &File{
 		p:        p,
