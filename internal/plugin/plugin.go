@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/Neakxs/protoc-gen-authz/internal/cfg"
+	"github.com/Neakxs/protoc-gen-authz/cfg"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"gopkg.in/yaml.v2"
