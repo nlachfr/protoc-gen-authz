@@ -27,8 +27,8 @@ func NewOrgServiceAuthzInterceptor() (authorize.AuthzInterceptor, error) {
 		expr string
 		req  proto.Message
 	}{
-		"service.v1.OrgService.Ping": {expr: `!canPong() && size(request.ping) > 0`, req: &PingRequest{}},
-		"service.v1.OrgService.Pong": {expr: `canPong() && size(request.pong) > 0`, req: &PongRequest{}},
+		"/service.v1.OrgService/Ping": {expr: `!canPong() && size(request.ping) > 0`, req: &PingRequest{}},
+		"/service.v1.OrgService/Pong": {expr: `canPong() && size(request.pong) > 0`, req: &PongRequest{}},
 	} {
 		if pgr, err := authorize.BuildAuthzProgram(v.expr, v.req, _File_example_service_v1_org_service_proto_authzConfiguration); err != nil {
 			return nil, err
