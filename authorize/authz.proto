@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package neakxs.authz;
+package authorize;
 
 option go_package = "github.com/Neakxs/protoc-gen-authz/authorize";
 
