@@ -10,16 +10,14 @@ package {{.GoPackageName}}
 
 {{ if (gt (len .Config.Globals.Functions) 0) }}
 // Authz global configuration
-var _{{.GoDescriptorIdent.GoName}}_authzConfiguration = &{{cfg "Config"}}{
-	Globals: struct {
-		Functions map[string]string "yaml:\"functions\" json:\"functions\""
-	}{
-		Functions: map[string]string{
+var _{{.GoDescriptorIdent.GoName}}_authzConfiguration = &{{authorize "FileRule"}}{
+    Globals: &{{authorize "FileRule_Globals"}}{
+        Functions: map[string]string{
             {{ range $key, $value := .Config.Globals.Functions -}}
                 "{{ $key }}": `{{ $value }}`,
             {{- end }}
         },
-	},
+    },
 }
 {{ end }}
 
