@@ -1,24 +1,27 @@
 syntax = "proto3";
 
-package neakxs.authz;
+package authorize;
 
 option go_package = "github.com/Neakxs/protoc-gen-authz/authorize";
 
 import "google/protobuf/descriptor.proto";
 
 extend google.protobuf.FileOptions {
-    Globals globals = 1145;
+    FileRule file = 1145;
 }
 
-extend google.protobuf.MessageOptions {
-    Rule rule = 1145;
+message FileRule {
+    message Globals {
+        map<string, string> functions = 1;
+    }
+    Globals globals = 1;
 }
 
-message Globals {
-    map<string, string> functions = 1;
+extend google.protobuf.MethodOptions {
+    MethodRule method = 1145;
 }
 
-message Rule {
+message MethodRule {
     string expr = 1;
 }
 

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/Neakxs/protoc-gen-authz/internal/cfg"
+	"github.com/Neakxs/protoc-gen-authz/authorize"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"gopkg.in/yaml.v2"
@@ -22,7 +22,7 @@ func Run() {
 	protogen.Options{
 		ParamFunc: flag.CommandLine.Set,
 	}.Run(func(gen *protogen.Plugin) error {
-		c := cfg.Config{}
+		c := &authorize.FileRule{}
 		if config != nil {
 			b, err := os.ReadFile(*config)
 			if err != nil {
@@ -42,7 +42,7 @@ func Run() {
 			if !file.Generate {
 				continue
 			}
-			if err := NewFile(gen, file, &c).Generate(); err != nil {
+			if err := NewFile(gen, file, c).Generate(); err != nil {
 				return err
 			}
 		}

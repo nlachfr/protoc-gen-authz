@@ -28,21 +28,13 @@ option go_package = "github.com/org/proto/gen/go/service/v1";
 
 import "authorize/authz.proto";
 
-option (neakxs.authz.globals) = {
-    functions: [
-        {
-            key: 'isAdmin'
-            value: '"x-admin" in _ctx.metadata'
-        }
-    ]
-};
-
 service OrgService {
-    rpc Ping(PingRequest) returns (PingResponse) {};
+    rpc Ping(PingRequest) returns (PingResponse) {
+        option (authorize.method).expr = 'size(request.ping) > 0';
+    };
 }
 
 message PingRequest {
-    option (neakxs.authz.rule).expr = 'isAdmin() && size(ping) > 0';
     string ping = 1;
 }
 message PingResponse {
@@ -62,16 +54,31 @@ protoc \
 
 3. Implement gRPC service
 
+4. Add interceptors to your gRPC server
+
 ```golang
-func (*orgServiceServer) Ping(ctx context.Context, in *v1.PingRequest) (*v1.PingResponse, error) {
-    if err := in.Authorize(ctx); err != nil {
-        return nil, err
+package main
+
+import (
+    v1 "github.com/org/proto/gen/go/service/v1"
+    "google.golang.org/grpc"
+)
+
+func main() {
+    authzInterceptor, err := v1.NewOrgServiceAuthzInterceptor()
+    if err != nil {
+        panic(err)
     }
-    // implement logic
+    srv := grpc.NewServer(
+        grpc.UnaryInterceptor(authzInterceptor.GetUnaryServerInterceptor()),
+        grpc.StreamInterceptor(authzInterceptor.GetStreamServerInterceptor()),
+    )
+    v1.RegisterOrgServiceServer(srv, &orgServiceServer{})
+    srv.Serve(...)
 }
 ```
 
-4. Profit
+5. Profit
 
 ## Configuration
 
@@ -83,7 +90,7 @@ With the example above, we can create a `config.yml` file :
 version: v1
 globals:
   functions:
-    isAdmin: "x-admin" in _ctx.metadata
+    isAdmin: "x-admin" in context.metadata
 ```
 
 You can then use it with the `--go-authz_opt=config=path/to/config.yml` option.
