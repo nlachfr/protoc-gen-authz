@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -23,7 +24,9 @@ func AuthorizationContextFromContext(ctx context.Context) *AuthorizationContext 
 	}
 	if p, ok := peer.FromContext(ctx); ok {
 		res.Peer.Addr = p.Addr.String()
-		res.Peer.AuthInfo = p.AuthInfo.AuthType()
+		if p.AuthInfo != nil {
+			res.Peer.AuthInfo = p.AuthInfo.AuthType()
+		}
 	}
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		for k, v := range md {
@@ -41,7 +44,9 @@ type AuthzInterceptor interface {
 }
 
 func NewAuthzInterceptor(methodProgramMapping map[string]cel.Program) AuthzInterceptor {
-	return &authzInterceptor{}
+	return &authzInterceptor{
+		methodProgramMapping: methodProgramMapping,
+	}
 }
 
 type authzInterceptor struct {
@@ -58,12 +63,12 @@ func (i *authzInterceptor) authorize(ctx context.Context, req interface{}, fullM
 			if err != nil {
 				return err
 			}
-			if res, ok := val.Value().(bool); ok {
-				if !res {
-					return status.Error(codes.PermissionDenied, fmt.Sprintf(`Permission denied on "%s"`, fullMethod))
-				}
+			if !types.IsBool(val) {
+				val = val.ConvertToType(types.BoolType)
 			}
-			return status.Error(codes.Unknown, "")
+			if !val.Value().(bool) {
+				return status.Error(codes.PermissionDenied, fmt.Sprintf(`Permission denied on "%s"`, fullMethod))
+			}
 		}
 	}
 	return nil
