@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package service.v1;
+option go_package = "github.com/Neakxs/protoc-gen-autz/example/service/v1";
+
+import "authorize/authz.proto";
+import "google/protobuf/empty.proto";
+
+option (authorize.file) = {
+    globals: {
+        functions: [
+            {
+                key: 'canPong'
+                value: '"x-pong" in context.metadata'
+            }
+        ]
+    };
+};
+
+service OrgService {
+    rpc Ping(PingRequest) returns (google.protobuf.Empty) {
+        option (authorize.method).expr = '!canPong() && size(request.ping) > 0';
+    };
+    rpc Pong(PongRequest) returns (google.protobuf.Empty) {
+        option (authorize.method).expr = "canPong() && size(request.pong) > 0";
+    };
+}
+
+message PingRequest {
+    string ping = 1;
+}
+message PongRequest {
+    string pong = 1;
+}
