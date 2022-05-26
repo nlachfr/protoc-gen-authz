@@ -30,7 +30,7 @@ func New{{.GoName}}AuthzInterceptor() ({{authorize "AuthzInterceptor"}}, error) 
     }{
         {{ range $m := $s.Methods }}
         {{- if $m.MethodRule -}}
-            "{{$m.Desc.FullName}}": {expr: `{{$m.MethodRule.Expr}}`, req: &{{QualifiedGoIdent $m.Input.GoIdent.GoImportPath $m.Input.GoIdent.GoName}}{}},
+            "/{{$s.Desc.FullName}}/{{$m.GoName}}": {expr: `{{$m.MethodRule.Expr}}`, req: &{{QualifiedGoIdent $m.Input.GoIdent.GoImportPath $m.Input.GoIdent.GoName}}{}},
         {{- end}}
         {{end}}
     } {
