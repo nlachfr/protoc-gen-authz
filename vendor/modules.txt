@@ -140,6 +140,6 @@ google.golang.org/protobuf/types/known/structpb
 google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/wrapperspb
 google.golang.org/protobuf/types/pluginpb
-# gopkg.in/yaml.v2 v2.2.8
+# gopkg.in/yaml.v3 v3.0.0
 ## explicit
-gopkg.in/yaml.v2
+gopkg.in/yaml.v3
