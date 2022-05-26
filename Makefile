@@ -37,4 +37,10 @@ $(PROTOC_GEN_GO_AUTHZ):
 .PHONY: go-genproto
 go-genproto: $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOC_GEN_GO_AUTHZ) $(GENPROTO_GO) $(GENPROTO_EXAMPLE_GO)
 
+test:
+	go test -count=1 ./authorize/... ./internal/...
 
+coverage:
+	go test -count=1 ./authorize/... ./internal/... -cover -coverprofile=.cover.tmp
+	grep -v .pb.go .cover.tmp > .cover
+	go tool cover -func .cover
