@@ -32,7 +32,7 @@ func New{{.GoName}}AuthzInterceptor() ({{authorize "AuthzInterceptor"}}, error) 
         {{- if $m.MethodRule -}}
             "{{$m.Desc.FullName}}": {expr: `{{$m.MethodRule.Expr}}`, req: &{{QualifiedGoIdent $m.Input.GoIdent.GoImportPath $m.Input.GoIdent.GoName}}{}},
         {{- end}}
-        {{- end}}
+        {{end}}
     } {
         if pgr, err := {{authorize "BuildAuthzProgram"}}(v.expr, v.req,  _{{$f.GoDescriptorIdent.GoName}}_authzConfiguration); err != nil {
             return nil, err

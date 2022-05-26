@@ -44,7 +44,7 @@ func BuildAuthzProgram(expr string, req interface{}, config *FileRule) (cel.Prog
 	} else {
 		env, err := cel.NewEnv(envOpts...)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("new env error: %w", err)
 		}
 		for _, macro := range rawMacros {
 			ast, issues := env.Compile(config.Globals.Functions[macro])
@@ -57,11 +57,11 @@ func BuildAuthzProgram(expr string, req interface{}, config *FileRule) (cel.Prog
 	envOpts = append(envOpts, cel.Macros(macros...))
 	env, err := cel.NewEnv(envOpts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new env error: %w", err)
 	}
 	ast, issues := env.Compile(expr)
 	if issues != nil && issues.Err() != nil {
-		return nil, issues.Err()
+		return nil, fmt.Errorf("compile error: %w", issues.Err())
 	}
 	switch ast.ResultType().TypeKind.(type) {
 	case *v1alpha1.Type_Primitive:
@@ -85,11 +85,11 @@ func findMacros(config *FileRule, opts []cel.EnvOption, expr string) ([]string, 
 	}
 	env, err := cel.NewEnv(envOpts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new env error: %w", err)
 	}
 	ast, issues := env.Compile(expr)
 	if issues != nil && issues.Err() != nil {
-		return nil, issues.Err()
+		return nil, fmt.Errorf("compile error: %w", issues.Err())
 	}
 	return findMacrosInAST(ast, config.Globals.Functions), nil
 }
