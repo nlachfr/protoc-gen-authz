@@ -23,7 +23,7 @@ func Run() {
 		ParamFunc: flag.CommandLine.Set,
 	}.Run(func(gen *protogen.Plugin) error {
 		c := &authorize.FileRule{}
-		if config != nil {
+		if config != nil && len(*config) > 0 {
 			b, err := os.ReadFile(*config)
 			if err != nil {
 				return err
