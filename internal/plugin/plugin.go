@@ -7,7 +7,7 @@ import (
 	"github.com/Neakxs/protoc-gen-authz/authorize"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoregistry"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const PluginName = "protoc-gen-go-authz"
