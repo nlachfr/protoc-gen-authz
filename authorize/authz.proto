@@ -11,7 +11,10 @@ extend google.protobuf.FileOptions {
 }
 
 message FileRule {
-    map<string, string> functions = 1;
+    message Globals {
+        map<string, string> functions = 1;
+    }
+    Globals globals = 1;
 }
 
 extend google.protobuf.MethodOptions {

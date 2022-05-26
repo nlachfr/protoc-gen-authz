@@ -3,7 +3,6 @@ package authorize
 import (
 	"fmt"
 
-	"github.com/Neakxs/protoc-gen-authz/cfg"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/checker/decls"
 	"github.com/google/cel-go/interpreter"
@@ -13,7 +12,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func BuildAuthzProgram(expr string, req interface{}, config *cfg.Config) (cel.Program, error) {
+func BuildAuthzProgram(expr string, req interface{}, config *FileRule) (cel.Program, error) {
 	var reqDesc protoreflect.MessageDescriptor
 	var reqOpt cel.EnvOption
 	if r, ok := req.(proto.Message); ok {
@@ -79,7 +78,7 @@ func BuildAuthzProgram(expr string, req interface{}, config *cfg.Config) (cel.Pr
 	return pgr, nil
 }
 
-func findMacros(config *cfg.Config, opts []cel.EnvOption, expr string) ([]string, error) {
+func findMacros(config *FileRule, opts []cel.EnvOption, expr string) ([]string, error) {
 	envOpts := opts
 	for k := range config.Globals.Functions {
 		envOpts = append(envOpts, cel.Declarations(decls.NewFunction(k, decls.NewOverload(k, []*v1alpha1.Type{}, &v1alpha1.Type{TypeKind: &v1alpha1.Type_Dyn{}}))))
