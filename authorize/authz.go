@@ -66,7 +66,7 @@ func (i *authzInterceptor) authorize(ctx context.Context, req interface{}, fullM
 				return err
 			}
 			if !types.IsBool(val) {
-				val = val.ConvertToType(types.BoolType)
+				return status.Error(codes.Unknown, "")
 			}
 			if !val.Value().(bool) {
 				return status.Error(codes.PermissionDenied, fmt.Sprintf(`Permission denied on "%s"`, fullMethod))
