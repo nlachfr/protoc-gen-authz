@@ -79,6 +79,9 @@ func BuildAuthzProgram(expr string, req interface{}, config *FileRule) (cel.Prog
 }
 
 func findMacros(config *FileRule, opts []cel.EnvOption, expr string) ([]string, error) {
+	if config == nil {
+		return nil, nil
+	}
 	envOpts := opts
 	for k := range config.Globals.Functions {
 		envOpts = append(envOpts, cel.Declarations(decls.NewFunction(k, decls.NewOverload(k, []*v1alpha1.Type{}, &v1alpha1.Type{TypeKind: &v1alpha1.Type_Dyn{}}))))

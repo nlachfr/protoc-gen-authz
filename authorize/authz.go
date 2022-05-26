@@ -23,7 +23,9 @@ func AuthorizationContextFromContext(ctx context.Context) *AuthorizationContext 
 		Metadata: make(map[string]*AuthorizationContext_MetadataValue),
 	}
 	if p, ok := peer.FromContext(ctx); ok {
-		res.Peer.Addr = p.Addr.String()
+		if p.Addr != nil {
+			res.Peer.Addr = p.Addr.String()
+		}
 		if p.AuthInfo != nil {
 			res.Peer.AuthInfo = p.AuthInfo.AuthType()
 		}
@@ -64,7 +66,7 @@ func (i *authzInterceptor) authorize(ctx context.Context, req interface{}, fullM
 				return err
 			}
 			if !types.IsBool(val) {
-				val = val.ConvertToType(types.BoolType)
+				return status.Error(codes.Unknown, "")
 			}
 			if !val.Value().(bool) {
 				return status.Error(codes.PermissionDenied, fmt.Sprintf(`Permission denied on "%s"`, fullMethod))
