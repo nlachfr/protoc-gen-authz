@@ -24,21 +24,36 @@ The binary will be placed in your $GOBIN location.
 syntax = "proto3";
 
 package service.v1;
-option go_package = "github.com/org/proto/gen/go/service/v1";
+option go_package = "github.com/Neakxs/protoc-gen-autz/example/service/v1";
 
 import "authorize/authz.proto";
+import "google/protobuf/empty.proto";
+
+option (authorize.file) = {
+    globals: {
+        functions: [
+            {
+                key: 'canPong'
+                value: '"x-pong" in context.metadata'
+            }
+        ]
+    };
+};
 
 service OrgService {
-    rpc Ping(PingRequest) returns (PingResponse) {
-        option (authorize.method).expr = 'size(request.ping) > 0';
+    rpc Ping(PingRequest) returns (google.protobuf.Empty) {
+        option (authorize.method).expr = '!canPong() && size(request.ping) > 0';
+    };
+    rpc Pong(PongRequest) returns (google.protobuf.Empty) {
+        option (authorize.method).expr = "canPong() && size(request.pong) > 0";
     };
 }
 
 message PingRequest {
     string ping = 1;
 }
-message PingResponse {
-    string pong = 2;
+message PongRequest {
+    string pong = 1;
 }
 ```
 
@@ -60,21 +75,51 @@ protoc \
 package main
 
 import (
-    v1 "github.com/org/proto/gen/go/service/v1"
-    "google.golang.org/grpc"
+	"context"
+	"fmt"
+	"io/ioutil"
+	"net"
+	"path"
+
+	v1 "github.com/Neakxs/protoc-gen-authz/example/service/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+type orgServer struct {
+	v1.UnimplementedOrgServiceServer
+}
+
+func (s *orgServer) Ping(context.Context, *v1.PingRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
+func (s *orgServer) Pong(context.Context, *v1.PongRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
 func main() {
-    authzInterceptor, err := v1.NewOrgServiceAuthzInterceptor()
-    if err != nil {
-        panic(err)
-    }
-    srv := grpc.NewServer(
-        grpc.UnaryInterceptor(authzInterceptor.GetUnaryServerInterceptor()),
-        grpc.StreamInterceptor(authzInterceptor.GetStreamServerInterceptor()),
-    )
-    v1.RegisterOrgServiceServer(srv, &orgServiceServer{})
-    srv.Serve(...)
+	authzInterceptor, err := v1.NewOrgServiceAuthzInterceptor()
+	if err != nil {
+		panic(err)
+	}
+	srv := grpc.NewServer(
+		grpc.UnaryInterceptor(authzInterceptor.GetUnaryServerInterceptor()),
+		grpc.StreamInterceptor(authzInterceptor.GetStreamServerInterceptor()),
+	)
+	v1.RegisterOrgServiceServer(srv, &orgServer{})
+	dir, err := ioutil.TempDir("/tmp", "*")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Listening on unix://%s/unix.sock...\n", dir)
+	lis, err := net.Listen("unix", path.Join(dir, "unix.sock"))
+	if err != nil {
+		panic(err)
+	}
+	if err := srv.Serve(lis); err != nil {
+		panic(err)
+	}
 }
 ```
 
