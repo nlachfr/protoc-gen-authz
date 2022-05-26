@@ -7,18 +7,18 @@ option go_package = "github.com/Neakxs/protoc-gen-authz/authorize";
 import "google/protobuf/descriptor.proto";
 
 extend google.protobuf.FileOptions {
-    Globals globals = 1145;
+    FileRule file = 1145;
 }
 
-extend google.protobuf.MessageOptions {
-    Rule rule = 1145;
-}
-
-message Globals {
+message FileRule {
     map<string, string> functions = 1;
 }
 
-message Rule {
+extend google.protobuf.MethodOptions {
+    MethodRule method = 1145;
+}
+
+message MethodRule {
     string expr = 1;
 }
 

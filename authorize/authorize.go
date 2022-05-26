@@ -9,7 +9,6 @@ import (
 	expr "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
-	"google.golang.org/protobuf/proto"
 )
 
 func AuthorizationContextFromContext(ctx context.Context) *AuthorizationContext {
@@ -32,34 +31,6 @@ func AuthorizationContextFromContext(ctx context.Context) *AuthorizationContext 
 		}
 	}
 	return res
-}
-
-func BuildProgramVars(ctx context.Context, message proto.Message) interface{} {
-	res := map[string]interface{}{
-		"_ctx": AuthorizationContextFromContext(ctx),
-	}
-	fields := message.ProtoReflect().Descriptor().Fields()
-	for i := 0; i < fields.Len(); i++ {
-		field := fields.Get(i)
-		res[field.TextName()] = message.ProtoReflect().Get(field)
-	}
-	return res
-}
-
-func BuildEnvOptionsWithMacros(opts []cel.EnvOption, m map[string]string) ([]cel.EnvOption, error) {
-	env, err := cel.NewEnv(opts...)
-	if err != nil {
-		return nil, err
-	}
-	macros := []parser.Macro{}
-	for k, v := range m {
-		ast, issues := env.Compile(v)
-		if issues != nil && issues.Err() != nil {
-			return nil, issues.Err()
-		}
-		macros = append(macros, parser.NewGlobalMacro(k, 0, BuildMacroExpander(ast)))
-	}
-	return append(opts, cel.Macros(macros...)), nil
 }
 
 func BuildMacroExpander(ast *cel.Ast) parser.MacroExpander {
