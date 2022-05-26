@@ -23,7 +23,9 @@ func AuthorizationContextFromContext(ctx context.Context) *AuthorizationContext 
 		Metadata: make(map[string]*AuthorizationContext_MetadataValue),
 	}
 	if p, ok := peer.FromContext(ctx); ok {
-		res.Peer.Addr = p.Addr.String()
+		if p.Addr != nil {
+			res.Peer.Addr = p.Addr.String()
+		}
 		if p.AuthInfo != nil {
 			res.Peer.AuthInfo = p.AuthInfo.AuthType()
 		}
