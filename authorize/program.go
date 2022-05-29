@@ -54,6 +54,17 @@ func BuildAuthzProgram(expr string, req interface{}, config *FileRule) (cel.Prog
 			macros = append(macros, parser.NewGlobalMacro(macro, 0, BuildMacroExpander(ast)))
 		}
 	}
+	if config != nil && config.Globals != nil {
+		constantDecls := []*v1alpha1.Decl{}
+		for k, v := range config.Globals.Constants {
+			constantDecls = append(constantDecls, decls.NewConst(
+				k,
+				decls.String,
+				&v1alpha1.Constant{ConstantKind: &v1alpha1.Constant_StringValue{StringValue: v}},
+			))
+		}
+		envOpts = append(envOpts, cel.Declarations(constantDecls...))
+	}
 	envOpts = append(envOpts, cel.Macros(macros...))
 	env, err := cel.NewEnv(envOpts...)
 	if err != nil {
