@@ -16,6 +16,7 @@ message FileRule {
         map<string, string> constants = 2;
     }
     Globals globals = 1;
+    map<string,MethodRule> rules = 2;
 }
 
 extend google.protobuf.MethodOptions {
