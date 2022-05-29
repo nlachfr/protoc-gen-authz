@@ -32,6 +32,18 @@ func TestBuildAuthProgram(t *testing.T) {
 			WantErr: false,
 		},
 		{
+			Name: "OK (with constant)",
+			Expr: "request.ping == constPing",
+			Config: &FileRule{
+				Globals: &FileRule_Globals{
+					Constants: map[string]string{
+						"constPing": "ping",
+					},
+				},
+			},
+			WantErr: false,
+		},
+		{
 			Name: "OK (with bool macro)",
 			Expr: `rule()`,
 			Config: &FileRule{
