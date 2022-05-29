@@ -142,6 +142,9 @@ version: v1
 globals:
   functions:
     isAdmin: "x-admin" in context.metadata
+rules:
+	service.v1.OrgService.Pong:
+		expr: "canPong() && size(request.pong) > 0"
 ```
 
 You can then use it with the `--go-authz_opt=config=path/to/config.yml` option.
