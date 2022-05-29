@@ -89,14 +89,24 @@ type Method struct {
 }
 
 func (m *Method) MethodRule() *authorize.MethodRule {
-	return proto.GetExtension(m.Desc.Options(), authorize.E_Method).(*authorize.MethodRule)
+	var rule *authorize.MethodRule
+	if m.Config != nil {
+		if r, ok := m.Config.Rules[string(m.Desc.FullName())]; ok {
+			rule = r
+		}
+	}
+	if r, ok := proto.GetExtension(m.Desc.Options(), authorize.E_Method).(*authorize.MethodRule); ok && r != nil {
+		rule = r
+	}
+	return rule
 }
 
 func (m *Method) Validate() error {
-	if m.MethodRule() == nil {
+	rule := m.MethodRule()
+	if rule == nil {
 		return nil
 	}
-	if _, err := authorize.BuildAuthzProgram(m.MethodRule().GetExpr(), m.Input.Desc, m.Config); err != nil {
+	if _, err := authorize.BuildAuthzProgram(rule.GetExpr(), m.Input.Desc, m.Config); err != nil {
 		return err
 	}
 	return nil
