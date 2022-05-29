@@ -13,6 +13,7 @@ extend google.protobuf.FileOptions {
 message FileRule {
     message Globals {
         map<string, string> functions = 1;
+        map<string, string> constants = 2;
     }
     Globals globals = 1;
 }
