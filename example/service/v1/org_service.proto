@@ -11,7 +11,13 @@ option (authorize.file) = {
         functions: [
             {
                 key: 'canPong'
-                value: '"x-pong" in context.metadata'
+                value: 'xpong in context.metadata'
+            }
+        ]
+        constants: [
+            {
+                key: 'xpong'
+                value: "x-pong"
             }
         ]
     }

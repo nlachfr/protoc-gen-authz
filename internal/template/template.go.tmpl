@@ -43,6 +43,11 @@ var _{{.GoDescriptorIdent.GoName}}_authzConfiguration = &{{authorize "FileRule"}
                 "{{ $key }}": `{{ $value }}`,
             {{- end }}
         },
+        Constants: map[string]string{
+            {{ range $key, $value := .Config.Globals.Constants -}}
+                "{{ $key }}": `{{ $value }}`,
+            {{- end }}        
+        },
     },
     {{- end }}
     {{ if (gt (len .Config.Overloads.Functions) 0) -}}
