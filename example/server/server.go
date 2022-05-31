@@ -15,6 +15,25 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+type opt struct{}
+
+func (*opt) GetFunctionOverloads() []*authorize.FunctionOverload {
+	return []*authorize.FunctionOverload{{
+		Name: "do",
+		Function: func(v ...ref.Val) ref.Val {
+			fmt.Println(v)
+			return types.Bool(true)
+		},
+	}}
+}
+
+func (*opt) GetVariableOverloads() []*authorize.VariableOverload {
+	return []*authorize.VariableOverload{{
+		Name:  "ping",
+		Value: "xpong",
+	}}
+}
+
 type orgServer struct {
 	v1.UnimplementedOrgServiceServer
 }
@@ -28,13 +47,7 @@ func (s *orgServer) Pong(context.Context, *v1.PongRequest) (*emptypb.Empty, erro
 }
 
 func main() {
-	authzInterceptor, err := v1.NewOrgServiceAuthzInterceptor(&authorize.Overload{
-		Name: "do",
-		Function: func(v ...ref.Val) ref.Val {
-			fmt.Println("yes")
-			return types.Bool(true)
-		},
-	})
+	authzInterceptor, err := v1.NewOrgServiceAuthzInterceptor(&opt{})
 	if err != nil {
 		panic(err)
 	}
