@@ -8,9 +8,35 @@ package {{.GoPackageName}}
 
 {{ $f := . }}
 
-{{ if (gt (len .Config.Globals.Functions) 0) }}
+{{define "NewFileRule"}}&{{authorize "FileRule_Overloads_Function_Type"}}{
+    {{ if .GetPrimitive -}}
+    Type: &{{authorize "FileRule_Overloads_Function_Type_Primitive_"}}{
+        Primitive: {{authorize (print "FileRule_Overloads_Function_Type_" .GetPrimitive.String )}},
+    },
+    {{- else if .GetObject -}}
+    Type: &{{authorize "FileRule_Overloads_Function_Type_Object_"}}{
+        Object: {{.GetObject}},
+    },
+    {{- else if .GetArray -}}
+    Type: &{{authorize "FileRule_Overloads_Function_Type_Array_"}}{
+        Array: &{{authorize "FileRule_Overloads_Function_Type_Array"}}{
+            Type: {{template "NewFileRule" .GetArray.Type}},
+        },
+    },
+    {{- else if .GetMap -}}
+    Type: &{{authorize "FileRule_Overloads_Function_Type_Map_"}}{
+        Map: &{{authorize "FileRule_Overloads_Function_Type_Map"}}{
+            Key: {{template "NewFileRule" .GetMap.Key}},
+            Value: {{template "NewFileRule" .GetMap.Value}},
+        },
+    },
+    {{- end }}
+}
+{{- end}}
+
 // Authz global configuration
 var _{{.GoDescriptorIdent.GoName}}_authzConfiguration = &{{authorize "FileRule"}}{
+    {{ if (gt (len .Config.Globals.Functions) 0) -}}
     Globals: &{{authorize "FileRule_Globals"}}{
         Functions: map[string]string{
             {{ range $key, $value := .Config.Globals.Functions -}}
@@ -18,11 +44,28 @@ var _{{.GoDescriptorIdent.GoName}}_authzConfiguration = &{{authorize "FileRule"}
             {{- end }}
         },
     },
+    {{- end }}
+    {{ if (gt (len .Config.Overloads.Functions) 0) -}}
+    Overloads: &{{authorize "FileRule_Overloads"}}{
+        Functions: map[string]*{{authorize "FileRule_Overloads_Function"}}{
+            {{ range $key, $value := .Config.Overloads.Functions -}}
+                "{{ $key }}": {
+                    Args: []*{{authorize "FileRule_Overloads_Function_Type"}}{
+                        {{ range $arg := $value.Args -}}
+                        {{template "NewFileRule" $arg}},
+                        {{ end}}
+                    },
+                    Result: {{template "NewFileRule" $value.Result}},
+                },
+            {{- end }}
+        },
+    },
+    {{- end}}
 }
-{{ end }}
 
 {{ range $s := .Services }}
-func New{{.GoName}}AuthzInterceptor() ({{authorize "AuthzInterceptor"}}, error) {
+func New{{.GoName}}AuthzInterceptor(overloads ...*{{authorize "Overload"}}) ({{authorize "AuthzInterceptor"}}, error) {
+    lib := {{authorize "BuildRuntimeLibrary"}}(_{{$f.GoDescriptorIdent.GoName}}_authzConfiguration, overloads...)
     m := map[string]{{cel "Program"}}{}
     for k, v := range map[string]struct{
         expr string
@@ -34,7 +77,7 @@ func New{{.GoName}}AuthzInterceptor() ({{authorize "AuthzInterceptor"}}, error) 
         {{- end}}
         {{end}}
     } {
-        if pgr, err := {{authorize "BuildAuthzProgram"}}(v.expr, v.req,  _{{$f.GoDescriptorIdent.GoName}}_authzConfiguration); err != nil {
+        if pgr, err := {{authorize "BuildAuthzProgram"}}(v.expr, v.req,  _{{$f.GoDescriptorIdent.GoName}}_authzConfiguration, lib); err != nil {
             return nil, err
         } else {
             m[k] = pgr
