@@ -39,6 +39,7 @@ func BuildAuthzProgram(expr string, req interface{}, config *FileRule, libs ...c
 		),
 		buildGlobalConstantsOption(config),
 		buildOverloadFunctionsOption(config),
+		buildOverloadVariablesOption(config),
 	}
 	for i := 0; i < len(libs); i++ {
 		envOpts = append(envOpts, cel.Lib(libs[i]))
@@ -104,18 +105,28 @@ func buildOverloadFunctionsOption(config *FileRule) cel.EnvOption {
 			args := []*v1alpha1.Type{}
 			overload := name
 			for i := 0; i < len(v.Args); i++ {
-				args = append(args, TypeFromFunctionType(v.Args[i]))
+				args = append(args, TypeFromOverloadType(v.Args[i]))
 			}
 			functionDecls = append(functionDecls, decls.NewFunction(
 				name, decls.NewOverload(
 					overload,
 					args,
-					TypeFromFunctionType(v.Result),
+					TypeFromOverloadType(v.Result),
 				),
 			))
 		}
 	}
 	return cel.Declarations(functionDecls...)
+}
+
+func buildOverloadVariablesOption(config *FileRule) cel.EnvOption {
+	variableDecls := []*v1alpha1.Decl{}
+	if config != nil && config.Overloads != nil {
+		for k, v := range config.Overloads.Variables {
+			variableDecls = append(variableDecls, decls.NewVar(k, TypeFromOverloadType(v)))
+		}
+	}
+	return cel.Declarations(variableDecls...)
 }
 
 func findMacros(config *FileRule, opts []cel.EnvOption, expr string) ([]string, error) {

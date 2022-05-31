@@ -42,39 +42,39 @@ func AuthorizationContextFromContext(ctx context.Context) *AuthorizationContext 
 	return res
 }
 
-func TypeFromFunctionType(t *FileRule_Overloads_Function_Type) *v1alpha1.Type {
+func TypeFromOverloadType(t *FileRule_Overloads_Type) *v1alpha1.Type {
 	switch v := t.Type.(type) {
-	case *FileRule_Overloads_Function_Type_Primitive_:
+	case *FileRule_Overloads_Type_Primitive_:
 		switch v.Primitive {
-		case FileRule_Overloads_Function_Type_BOOL:
+		case FileRule_Overloads_Type_BOOL:
 			return decls.Bool
-		case FileRule_Overloads_Function_Type_INT:
+		case FileRule_Overloads_Type_INT:
 			return decls.Int
-		case FileRule_Overloads_Function_Type_UINT:
+		case FileRule_Overloads_Type_UINT:
 			return decls.Uint
-		case FileRule_Overloads_Function_Type_DOUBLE:
+		case FileRule_Overloads_Type_DOUBLE:
 			return decls.Double
-		case FileRule_Overloads_Function_Type_BYTES:
+		case FileRule_Overloads_Type_BYTES:
 			return decls.Bytes
-		case FileRule_Overloads_Function_Type_STRING:
+		case FileRule_Overloads_Type_STRING:
 			return decls.String
-		case FileRule_Overloads_Function_Type_DURATION:
+		case FileRule_Overloads_Type_DURATION:
 			return decls.Duration
-		case FileRule_Overloads_Function_Type_TIMESTAMP:
+		case FileRule_Overloads_Type_TIMESTAMP:
 			return decls.Timestamp
-		case FileRule_Overloads_Function_Type_ERROR:
+		case FileRule_Overloads_Type_ERROR:
 			return decls.Error
-		case FileRule_Overloads_Function_Type_DYN:
+		case FileRule_Overloads_Type_DYN:
 			return decls.Dyn
-		case FileRule_Overloads_Function_Type_ANY:
+		case FileRule_Overloads_Type_ANY:
 			return decls.Any
 		}
-	case *FileRule_Overloads_Function_Type_Object:
+	case *FileRule_Overloads_Type_Object:
 		return decls.NewObjectType(v.Object)
-	case *FileRule_Overloads_Function_Type_Array_:
-		return decls.NewListType(TypeFromFunctionType(v.Array.Type))
-	case *FileRule_Overloads_Function_Type_Map_:
-		return decls.NewMapType(TypeFromFunctionType(v.Map.Key), TypeFromFunctionType(v.Map.Value))
+	case *FileRule_Overloads_Type_Array_:
+		return decls.NewListType(TypeFromOverloadType(v.Array.Type))
+	case *FileRule_Overloads_Type_Map_:
+		return decls.NewMapType(TypeFromOverloadType(v.Map.Key), TypeFromOverloadType(v.Map.Value))
 	}
 	return decls.Null
 }
