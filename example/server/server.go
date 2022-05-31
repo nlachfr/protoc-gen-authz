@@ -7,7 +7,10 @@ import (
 	"net"
 	"path"
 
+	"github.com/Neakxs/protoc-gen-authz/authorize"
 	v1 "github.com/Neakxs/protoc-gen-authz/example/service/v1"
+	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -25,7 +28,13 @@ func (s *orgServer) Pong(context.Context, *v1.PongRequest) (*emptypb.Empty, erro
 }
 
 func main() {
-	authzInterceptor, err := v1.NewOrgServiceAuthzInterceptor()
+	authzInterceptor, err := v1.NewOrgServiceAuthzInterceptor(&authorize.Overload{
+		Name: "do",
+		Function: func(v ...ref.Val) ref.Val {
+			fmt.Println("yes")
+			return types.Bool(true)
+		},
+	})
 	if err != nil {
 		panic(err)
 	}
