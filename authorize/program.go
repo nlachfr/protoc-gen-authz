@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func BuildAuthzProgram(expr string, req interface{}, config *FileRule) (cel.Program, error) {
+func BuildAuthzProgram(expr string, req interface{}, config *FileRule, libs ...cel.Library) (cel.Program, error) {
 	var reqDesc protoreflect.MessageDescriptor
 	var reqOpt cel.EnvOption
 	if r, ok := req.(proto.Message); ok {
@@ -38,6 +38,10 @@ func BuildAuthzProgram(expr string, req interface{}, config *FileRule) (cel.Prog
 			),
 		),
 		buildGlobalConstantsOption(config),
+		buildOverloadFunctionsOption(config),
+	}
+	for i := 0; i < len(libs); i++ {
+		envOpts = append(envOpts, cel.Lib(libs[i]))
 	}
 	macros := []parser.Macro{}
 	if rawMacros, err := findMacros(config, envOpts, expr); err != nil {
@@ -55,7 +59,6 @@ func BuildAuthzProgram(expr string, req interface{}, config *FileRule) (cel.Prog
 			macros = append(macros, parser.NewGlobalMacro(macro, 0, BuildMacroExpander(ast)))
 		}
 	}
-
 	envOpts = append(envOpts, cel.Macros(macros...))
 	env, err := cel.NewEnv(envOpts...)
 	if err != nil {
@@ -75,7 +78,7 @@ func BuildAuthzProgram(expr string, req interface{}, config *FileRule) (cel.Prog
 	}
 	pgr, err := env.Program(ast, cel.OptimizeRegex(interpreter.MatchesRegexOptimization))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("program error: %w", err)
 	}
 	return pgr, nil
 }
@@ -92,6 +95,27 @@ func buildGlobalConstantsOption(config *FileRule) cel.EnvOption {
 		}
 	}
 	return cel.Declarations(constantDecls...)
+}
+
+func buildOverloadFunctionsOption(config *FileRule) cel.EnvOption {
+	functionDecls := []*v1alpha1.Decl{}
+	if config != nil && config.Overloads != nil {
+		for name, v := range config.Overloads.Functions {
+			args := []*v1alpha1.Type{}
+			overload := name
+			for i := 0; i < len(v.Args); i++ {
+				args = append(args, TypeFromFunctionType(v.Args[i]))
+			}
+			functionDecls = append(functionDecls, decls.NewFunction(
+				name, decls.NewOverload(
+					overload,
+					args,
+					TypeFromFunctionType(v.Result),
+				),
+			))
+		}
+	}
+	return cel.Declarations(functionDecls...)
 }
 
 func findMacros(config *FileRule, opts []cel.EnvOption, expr string) ([]string, error) {
