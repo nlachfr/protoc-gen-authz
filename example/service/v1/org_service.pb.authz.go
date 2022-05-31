@@ -16,21 +16,48 @@ import (
 var _File_example_service_v1_org_service_proto_authzConfiguration = &authorize.FileRule{
 	Globals: &authorize.FileRule_Globals{
 		Functions: map[string]string{
-			"canPong": `"x-pong" in context.metadata`,
+			"canPong": `xpong in context.metadata`,
+		},
+		Constants: map[string]string{
+			"xpong": `x-pong`,
+		},
+	},
+	Overloads: &authorize.FileRule_Overloads{
+		Functions: map[string]*authorize.FileRule_Overloads_Function{
+			"do": {
+				Args: []*authorize.FileRule_Overloads_Function_Type{
+					&authorize.FileRule_Overloads_Function_Type{
+						Type: &authorize.FileRule_Overloads_Function_Type_Primitive_{
+							Primitive: authorize.FileRule_Overloads_Function_Type_STRING,
+						},
+					},
+					&authorize.FileRule_Overloads_Function_Type{
+						Type: &authorize.FileRule_Overloads_Function_Type_Primitive_{
+							Primitive: authorize.FileRule_Overloads_Function_Type_STRING,
+						},
+					},
+				},
+				Result: &authorize.FileRule_Overloads_Function_Type{
+					Type: &authorize.FileRule_Overloads_Function_Type_Primitive_{
+						Primitive: authorize.FileRule_Overloads_Function_Type_BOOL,
+					},
+				},
+			},
 		},
 	},
 }
 
-func NewOrgServiceAuthzInterceptor() (authorize.AuthzInterceptor, error) {
+func NewOrgServiceAuthzInterceptor(overloads ...*authorize.Overload) (authorize.AuthzInterceptor, error) {
+	lib := authorize.BuildRuntimeLibrary(_File_example_service_v1_org_service_proto_authzConfiguration, overloads...)
 	m := map[string]cel.Program{}
 	for k, v := range map[string]struct {
 		expr string
 		req  proto.Message
 	}{
-		"/service.v1.OrgService/Ping": {expr: `!canPong() && size(request.ping) > 0`, req: &PingRequest{}},
+		"/service.v1.OrgService/Ping": {expr: `do("", "") && !canPong() && size(request.ping) > 0`, req: &PingRequest{}},
 		"/service.v1.OrgService/Pong": {expr: `canPong() && size(request.pong) > 0`, req: &PongRequest{}},
 	} {
-		if pgr, err := authorize.BuildAuthzProgram(v.expr, v.req, _File_example_service_v1_org_service_proto_authzConfiguration); err != nil {
+		if pgr, err := authorize.BuildAuthzProgram(v.expr, v.req, _File_example_service_v1_org_service_proto_authzConfiguration, lib); err != nil {
 			return nil, err
 		} else {
 			m[k] = pgr

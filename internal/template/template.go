@@ -34,5 +34,8 @@ func GenerateTemplate(v *pluginpb.Version, g *protogen.GeneratedFile) (*template
 		"cel": func(s string) string {
 			return g.QualifiedGoIdent(protogen.GoImportPath("github.com/google/cel-go/cel").Ident(s))
 		},
+		"functions": func(s string) string {
+			return g.QualifiedGoIdent(protogen.GoImportPath("github.com/google/cel-go/interpreter/functions").Ident(s))
+		},
 	}).Parse(tmpl)
 }

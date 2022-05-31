@@ -11,10 +11,16 @@ option (authorize.file) = {
         functions: [
             {
                 key: 'canPong'
-                value: '"x-pong" in context.metadata'
+                value: 'xpong in context.metadata'
             }
         ]
-    };
+        constants: [
+            {
+                key: 'xpong'
+                value: "x-pong"
+            }
+        ]
+    }
     rules: [
         {
             key: "service.v1.OrgService.Pong"
@@ -23,11 +29,31 @@ option (authorize.file) = {
             }
         }
     ]
+    overloads: {
+        functions: [
+            {
+                key: "do"
+                value: {
+                    args: [
+                        {
+                            primitive: STRING
+                        },
+                        {
+                            primitive: STRING
+                        }
+                    ]
+                    result: {
+                        primitive: BOOL
+                    }
+                },
+            }
+        ]
+    }
 };
 
 service OrgService {
     rpc Ping(PingRequest) returns (google.protobuf.Empty) {
-        option (authorize.method).expr = '!canPong() && size(request.ping) > 0';
+        option (authorize.method).expr = 'do("", "") && !canPong() && size(request.ping) > 0';
     };
     rpc Pong(PongRequest) returns (google.protobuf.Empty) {};
 }
