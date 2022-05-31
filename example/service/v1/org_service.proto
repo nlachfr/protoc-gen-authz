@@ -48,12 +48,20 @@ option (authorize.file) = {
                 },
             }
         ]
+        variables: [
+            {
+                key: "ping"
+                value: {
+                    primitive: STRING
+                }
+            }
+        ]
     }
 };
 
 service OrgService {
     rpc Ping(PingRequest) returns (google.protobuf.Empty) {
-        option (authorize.method).expr = 'do("", "") && !canPong() && size(request.ping) > 0';
+        option (authorize.method).expr = 'do(ping, xpong) && !canPong() && size(request.ping) > 0';
     };
     rpc Pong(PongRequest) returns (google.protobuf.Empty) {};
 }

@@ -31,7 +31,6 @@ $(PROTOC_GEN_GO_AUTHZ):
 	protoc --go-grpc_out=. --go-grpc_opt=paths=source_relative $<
 
 %.pb.authz.go: %.proto
-	which protoc-gen-go-authz
 	protoc --go-authz_out=. --go-authz_opt=paths=source_relative $<
 
 .PHONY: go-genproto
