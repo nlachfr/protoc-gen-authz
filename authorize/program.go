@@ -12,21 +12,29 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func BuildAuthzProgram(expr string, req interface{}, config *FileRule, libs ...cel.Library) (cel.Program, error) {
-	var reqDesc protoreflect.MessageDescriptor
-	var reqOpt cel.EnvOption
-	if r, ok := req.(proto.Message); ok {
-		reqOpt = cel.Types(r)
-		reqDesc = r.ProtoReflect().Descriptor()
-	} else if r, ok := req.(protoreflect.MessageDescriptor); ok {
-		reqOpt = cel.TypeDescs(r.ParentFile())
-		reqDesc = r
-	} else {
-		return nil, fmt.Errorf("invalid req")
-	}
-	authzCtx := &AuthorizationContext{}
+func BuildAuthzProgramFromDesc(expr string, msgDesc protoreflect.MessageDescriptor, config *FileRule, libs ...cel.Library) (cel.Program, error) {
 	envOpts := []cel.EnvOption{
-		reqOpt,
+		cel.TypeDescs(msgDesc.Parent()),
+	}
+	for i := 0; i < len(libs); i++ {
+		envOpts = append(envOpts, cel.Lib(libs[i]))
+	}
+	return buildAuthzProgram(expr, msgDesc, config, envOpts...)
+}
+
+func BuildAuthzProgram(expr string, msg proto.Message, config *FileRule, libs ...cel.Library) (cel.Program, error) {
+	envOpts := []cel.EnvOption{
+		cel.Types(msg),
+	}
+	for i := 0; i < len(libs); i++ {
+		envOpts = append(envOpts, cel.Lib(libs[i]))
+	}
+	return buildAuthzProgram(expr, msg.ProtoReflect().Descriptor(), config, envOpts...)
+}
+
+func buildAuthzProgram(expr string, desc protoreflect.MessageDescriptor, config *FileRule, envOpts ...cel.EnvOption) (cel.Program, error) {
+	authzCtx := &AuthorizationContext{}
+	envOpts = append(envOpts,
 		cel.Types(authzCtx),
 		cel.Declarations(
 			decls.NewVar(
@@ -34,18 +42,15 @@ func BuildAuthzProgram(expr string, req interface{}, config *FileRule, libs ...c
 				decls.NewObjectType(string(authzCtx.ProtoReflect().Descriptor().FullName()))),
 			decls.NewVar(
 				"request",
-				decls.NewObjectType(string(reqDesc.FullName())),
+				decls.NewObjectType(string(desc.FullName())),
 			),
 		),
 		buildGlobalConstantsOption(config),
 		buildOverloadFunctionsOption(config),
 		buildOverloadVariablesOption(config),
-	}
-	for i := 0; i < len(libs); i++ {
-		envOpts = append(envOpts, cel.Lib(libs[i]))
-	}
+	)
 	macros := []parser.Macro{}
-	if rawMacros, err := findMacros(config, envOpts, expr); err != nil {
+	if rawMacros, err := FindMacros(config, envOpts, expr); err != nil {
 		return nil, err
 	} else {
 		env, err := cel.NewEnv(envOpts...)
@@ -127,60 +132,4 @@ func buildOverloadVariablesOption(config *FileRule) cel.EnvOption {
 		}
 	}
 	return cel.Declarations(variableDecls...)
-}
-
-func findMacros(config *FileRule, opts []cel.EnvOption, expr string) ([]string, error) {
-	if config == nil {
-		return nil, nil
-	}
-	envOpts := opts
-	for k := range config.Globals.Functions {
-		envOpts = append(envOpts, cel.Declarations(decls.NewFunction(k, decls.NewOverload(k, []*v1alpha1.Type{}, &v1alpha1.Type{TypeKind: &v1alpha1.Type_Dyn{}}))))
-	}
-	env, err := cel.NewEnv(envOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("new env error: %w", err)
-	}
-	ast, issues := env.Compile(expr)
-	if issues != nil && issues.Err() != nil {
-		return nil, fmt.Errorf("compile error: %w", issues.Err())
-	}
-	return findMacrosInAST(ast, config.Globals.Functions), nil
-}
-
-func findMacrosInAST(ast *cel.Ast, m map[string]string) []string {
-	s := findMacrosInExpr(ast.Expr(), m)
-	mm := map[string]bool{}
-	for _, i := range s {
-		mm[i] = true
-	}
-	s = []string{}
-	for k := range mm {
-		s = append(s, k)
-	}
-	return s
-}
-
-func findMacrosInExpr(e *v1alpha1.Expr, m map[string]string) []string {
-	res := []string{}
-	switch exp := e.ExprKind.(type) {
-	case *v1alpha1.Expr_ConstExpr:
-	case *v1alpha1.Expr_IdentExpr:
-	case *v1alpha1.Expr_SelectExpr:
-	case *v1alpha1.Expr_CallExpr:
-		if _, ok := m[exp.CallExpr.Function]; ok {
-			res = append(res, exp.CallExpr.Function)
-		} else {
-			for _, i := range exp.CallExpr.Args {
-				res = append(res, findMacrosInExpr(i, m)...)
-			}
-		}
-	case *v1alpha1.Expr_ListExpr:
-		for _, i := range exp.ListExpr.Elements {
-			res = append(res, findMacrosInExpr(i, m)...)
-		}
-	case *v1alpha1.Expr_StructExpr:
-	case *v1alpha1.Expr_ComprehensionExpr:
-	}
-	return res
 }
