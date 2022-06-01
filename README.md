@@ -1,5 +1,7 @@
 # protoc-gen-authz
 
+[![Coverage](https://coveralls.io/repos/Neakxs/protoc-gen-authz/badge.svg?branch=main&service=github)](https://coveralls.io/github/Neakxs/protoc-gen-authz?branch=main) [![GoReportCard](https://goreportcard.com/badge/github.com/Neakxs/protoc-gen-authz)](https://goreportcard.com/badge/github.com/Neakxs/protoc-gen-authz) ![GitHub](https://img.shields.io/github/license/Neakxs/protoc-gen-authz)
+
 ## About
 
 __protoc-gen-authz__ is an authorization plugin for the protocol buffers compiler [protoc](https://github.com/protocolbuffers/protobuf). It relies on the [Common Expression Language](https://github.com/google/cel-spec) specification for writing authorization rules and can use gRPC metadata against protobuf messages.
