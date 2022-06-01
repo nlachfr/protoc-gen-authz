@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package testdata.advanced;
+option go_package = "github.com/Neakxs/protoc-gen-autz/testdata/advanced";
+
+import "authorize/authz.proto";
+import "google/protobuf/empty.proto";
+
+option (authorize.file) = {
+    globals: {
+        functions: [{
+            key: 'getName'
+            value: '"name"'
+        }]
+        constants: [{
+            key: 'name'
+            value: 'name'
+        }]
+    }
+    rules: [{
+        key: "testdata.advanced.AdvancedService.Advanced"
+        value: { expr: 'request.name == getName() || request.name == name' }
+    }]
+};
+
+service AdvancedService {
+    rpc Advanced(AdvancedRequest) returns (google.protobuf.Empty) {};
+}
+
+message AdvancedRequest {
+    string name = 1;
+}
