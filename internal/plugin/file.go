@@ -106,7 +106,7 @@ func (m *Method) Validate() error {
 	if rule == nil {
 		return nil
 	}
-	if _, err := authorize.BuildAuthzProgram(rule.GetExpr(), m.Input.Desc, m.Config); err != nil {
+	if _, err := authorize.BuildAuthzProgramFromDesc(rule.GetExpr(), m.Input.Desc, m.Config); err != nil {
 		return err
 	}
 	return nil
