@@ -17,6 +17,9 @@ func BuildMacroExpander(ast *cel.Ast) parser.MacroExpander {
 }
 
 func translateMacroExpr(e *v1alpha1.Expr, eh parser.ExprHelper) *v1alpha1.Expr {
+	if e == nil {
+		return nil
+	}
 	switch exp := e.ExprKind.(type) {
 	case *v1alpha1.Expr_ConstExpr:
 		switch k := exp.ConstExpr.ConstantKind.(type) {
