@@ -54,7 +54,6 @@ var _{{.GoDescriptorIdent.GoName}}_authzConfiguration = &{{authorize "FileRule"}
         {{- end }}
     },
     {{- end}}
-    
     {{ if .Config.Overloads -}}
     Overloads: &{{authorize "FileRule_Overloads"}}{
         {{ if (gt (len .Config.Overloads.Functions) 0) -}}
