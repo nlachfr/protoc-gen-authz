@@ -36,20 +36,26 @@ package {{.GoPackageName}}
 
 // Authz global configuration
 var _{{.GoDescriptorIdent.GoName}}_authzConfiguration = &{{authorize "FileRule"}}{
-    {{ if (gt (len .Config.Globals.Functions) 0) -}}
+    {{ if .Config.Globals -}}
     Globals: &{{authorize "FileRule_Globals"}}{
+        {{ if (gt (len .Config.Globals.Functions) 0) -}}
         Functions: map[string]string{
             {{ range $key, $value := .Config.Globals.Functions -}}
                 "{{ $key }}": `{{ $value }}`,
             {{- end }}
-        },
+        },        
+        {{- end }}
+        {{ if (gt (len .Config.Globals.Constants) 0) -}}
         Constants: map[string]string{
             {{ range $key, $value := .Config.Globals.Constants -}}
                 "{{ $key }}": `{{ $value }}`,
             {{- end }}        
-        },
+        },        
+        {{- end }}
     },
-    {{- end }}
+    {{- end}}
+    
+    {{ if .Config.Overloads -}}
     Overloads: &{{authorize "FileRule_Overloads"}}{
         {{ if (gt (len .Config.Overloads.Functions) 0) -}}
         Functions: map[string]*{{authorize "FileRule_Overloads_Function"}}{
@@ -72,7 +78,8 @@ var _{{.GoDescriptorIdent.GoName}}_authzConfiguration = &{{authorize "FileRule"}
             {{- end }}
         },
         {{- end}}
-    },
+    },    
+    {{- end}}
 }
 
 {{ range $s := .Services }}
