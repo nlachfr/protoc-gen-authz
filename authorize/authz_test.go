@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/Neakxs/protoc-gen-authz/testdata"
+	testdata "github.com/Neakxs/protoc-gen-authz/testdata"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/checker/decls"
 	"github.com/google/go-cmp/cmp"

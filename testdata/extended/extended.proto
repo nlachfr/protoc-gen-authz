@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package testdata.extended;
-option go_package = "github.com/Neakxs/protoc-gen-autz/testdata/extended";
+option go_package = "github.com/Neakxs/protoc-gen-authz/testdata/extended";
 
 import "authorize/authz.proto";
 import "google/protobuf/empty.proto";
