@@ -26,7 +26,7 @@ The binary will be placed in your $GOBIN location.
 syntax = "proto3";
 
 package service.v1;
-option go_package = "github.com/Neakxs/protoc-gen-autz/example/service/v1";
+option go_package = "github.com/Neakxs/protoc-gen-authz/example/service/v1";
 
 import "authorize/authz.proto";
 import "google/protobuf/empty.proto";
