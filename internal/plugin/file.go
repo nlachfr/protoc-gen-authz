@@ -5,6 +5,7 @@ import (
 	"github.com/Neakxs/protoc-gen-authz/internal/template"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func NewFile(p *protogen.Plugin, f *protogen.File, c *authorize.FileRule) *File {
@@ -17,7 +18,7 @@ func NewFile(p *protogen.Plugin, f *protogen.File, c *authorize.FileRule) *File 
 	}
 	svcs := []*Service{}
 	for i := 0; i < len(f.Services); i++ {
-		svcs = append(svcs, NewService(f.Services[i], cfg))
+		svcs = append(svcs, NewService(f.Services[i], cfg, p.Files))
 	}
 	return &File{
 		p:        p,
@@ -56,16 +57,17 @@ func (f *File) Validate() error {
 	return nil
 }
 
-func NewService(s *protogen.Service, c *authorize.FileRule) *Service {
+func NewService(s *protogen.Service, c *authorize.FileRule, imports []*protogen.File) *Service {
 	mths := []*Method{}
 	for i := 0; i < len(s.Methods); i++ {
-		mths = append(mths, NewMethod(s.Methods[i], c))
+		mths = append(mths, NewMethod(s.Methods[i], c, imports))
 	}
-	return &Service{Service: s, Config: c, Methods: mths}
+	return &Service{Service: s, Config: c, Methods: mths, Imports: imports}
 }
 
 type Service struct {
 	*protogen.Service
+	Imports []*protogen.File
 	Config  *authorize.FileRule
 	Methods []*Method
 }
@@ -79,13 +81,14 @@ func (s *Service) Validate() error {
 	return nil
 }
 
-func NewMethod(m *protogen.Method, c *authorize.FileRule) *Method {
-	return &Method{Method: m, Config: c}
+func NewMethod(m *protogen.Method, c *authorize.FileRule, imports []*protogen.File) *Method {
+	return &Method{Method: m, Config: c, Imports: imports}
 }
 
 type Method struct {
 	*protogen.Method
-	Config *authorize.FileRule
+	Imports []*protogen.File
+	Config  *authorize.FileRule
 }
 
 func (m *Method) MethodRule() *authorize.MethodRule {
@@ -106,7 +109,11 @@ func (m *Method) Validate() error {
 	if rule == nil {
 		return nil
 	}
-	if _, err := authorize.BuildAuthzProgramFromDesc(rule.GetExpr(), m.Input.Desc, m.Config); err != nil {
+	imports := []protoreflect.FileDescriptor{}
+	for i := 0; i < len(m.Imports); i++ {
+		imports = append(imports, m.Imports[i].Desc)
+	}
+	if _, err := authorize.BuildAuthzProgramFromDesc(rule.GetExpr(), imports, m.Input.Desc, m.Config); err != nil {
 		return err
 	}
 	return nil

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package testdata.crossref;
+option go_package = "github.com/Neakxs/protoc-gen-authz/testdata/crossref";
+
+import "authorize/authz.proto";
+import "google/protobuf/empty.proto";
+import "testdata/basic/basic.proto";
+
+service CrossrefService {
+    rpc Crossref(CrossrefRequest) returns (google.protobuf.Empty) {
+        option (authorize.method).expr = 'request.ref.name == "name"';
+    };
+}
+
+message CrossrefRequest {
+    testdata.basic.BasicRequest ref = 1;
+}

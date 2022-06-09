@@ -12,9 +12,12 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func BuildAuthzProgramFromDesc(expr string, msgDesc protoreflect.MessageDescriptor, config *FileRule, libs ...cel.Library) (cel.Program, error) {
+func BuildAuthzProgramFromDesc(expr string, imports []protoreflect.FileDescriptor, msgDesc protoreflect.MessageDescriptor, config *FileRule, libs ...cel.Library) (cel.Program, error) {
 	envOpts := []cel.EnvOption{
 		cel.TypeDescs(msgDesc.Parent()),
+	}
+	for i := 0; i < len(imports); i++ {
+		envOpts = append(envOpts, cel.TypeDescs(imports[i]))
 	}
 	for i := 0; i < len(libs); i++ {
 		envOpts = append(envOpts, cel.Lib(libs[i]))

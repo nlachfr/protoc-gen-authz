@@ -5,9 +5,12 @@ import (
 
 	"github.com/Neakxs/protoc-gen-authz/testdata/advanced"
 	"github.com/Neakxs/protoc-gen-authz/testdata/basic"
+	"github.com/Neakxs/protoc-gen-authz/testdata/crossref"
 	"github.com/Neakxs/protoc-gen-authz/testdata/extended"
+	"github.com/Neakxs/protoc-gen-authz/testdata/invalid"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 func newEnum(desc protoreflect.EnumDescriptor) *protogen.Enum {
@@ -166,29 +169,52 @@ func newFile(desc protoreflect.FileDescriptor) *protogen.File {
 	return f
 }
 
-func TestValidate(t *testing.T) {
+func TestGenerate(t *testing.T) {
 	tests := []struct {
-		Name string
-		Desc protoreflect.FileDescriptor
+		Name    string
+		Desc    []protoreflect.FileDescriptor
+		WantErr bool
 	}{
 		{
-			Name: "Basic",
-			Desc: basic.File_testdata_basic_basic_proto,
+			Name:    "Basic",
+			Desc:    []protoreflect.FileDescriptor{basic.File_testdata_basic_basic_proto},
+			WantErr: false,
 		},
 		{
-			Name: "Advanced",
-			Desc: advanced.File_testdata_advanced_advanced_proto,
+			Name:    "Advanced",
+			Desc:    []protoreflect.FileDescriptor{advanced.File_testdata_advanced_advanced_proto},
+			WantErr: false,
 		},
 		{
-			Name: "Extended",
-			Desc: extended.File_testdata_extended_extended_proto,
+			Name:    "Extended",
+			Desc:    []protoreflect.FileDescriptor{extended.File_testdata_extended_extended_proto},
+			WantErr: false,
+		},
+		{
+			Name:    "Crossref",
+			Desc:    []protoreflect.FileDescriptor{crossref.File_testdata_crossref_crossref_proto, basic.File_testdata_basic_basic_proto},
+			WantErr: false,
+		},
+		{
+			Name:    "Invalid",
+			Desc:    []protoreflect.FileDescriptor{invalid.File_testdata_invalid_invalid_proto},
+			WantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			g := newFile(tt.Desc)
-			if err := NewFile(&protogen.Plugin{Files: []*protogen.File{g}}, g, nil).Validate(); err != nil {
-				t.Errorf("want nil, got %v", err)
+			gs := []*protogen.File{}
+			for i := 0; i < len(tt.Desc); i++ {
+				gs = append(gs, newFile(tt.Desc[i]))
+				gs[i].GeneratedFilenamePrefix = t.TempDir()
+			}
+			var i int32 = 0
+			if err := NewFile(&protogen.Plugin{Request: &pluginpb.CodeGeneratorRequest{CompilerVersion: &pluginpb.Version{
+				Major: &i,
+				Minor: &i,
+				Patch: &i,
+			}}, Files: gs}, gs[0], nil).Generate(); err != nil != tt.WantErr {
+				t.Errorf("wantErr %v, got %v", tt.WantErr, err)
 			}
 		})
 	}
