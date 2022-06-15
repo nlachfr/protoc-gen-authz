@@ -54,7 +54,6 @@ func main() {
 	}
 	srv := grpc.NewServer(
 		grpc.UnaryInterceptor(interceptors.NewGRPCUnaryInterceptor(authzInterceptor)),
-		grpc.StreamInterceptor(interceptors.NewGRPCStreamInterceptor(authzInterceptor)),
 	)
 	v1.RegisterOrgServiceServer(srv, &orgServer{})
 	dir, err := ioutil.TempDir("/tmp", "*")
