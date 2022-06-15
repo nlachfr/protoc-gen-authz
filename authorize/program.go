@@ -36,13 +36,15 @@ func BuildAuthzProgram(expr string, msg proto.Message, config *FileRule, libs ..
 }
 
 func buildAuthzProgram(expr string, desc protoreflect.MessageDescriptor, config *FileRule, envOpts ...cel.EnvOption) (cel.Program, error) {
-	authzCtx := &AuthorizationContext{}
 	envOpts = append(envOpts,
-		cel.Types(authzCtx),
 		cel.Declarations(
 			decls.NewVar(
-				"context",
-				decls.NewObjectType(string(authzCtx.ProtoReflect().Descriptor().FullName()))),
+				"headers",
+				decls.NewMapType(
+					decls.String,
+					decls.NewListType(decls.String),
+				),
+			),
 			decls.NewVar(
 				"request",
 				decls.NewObjectType(string(desc.FullName())),
