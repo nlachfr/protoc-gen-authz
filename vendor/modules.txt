@@ -1,6 +1,11 @@
 # github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20220209173558-ad29539cd2e9
 ## explicit; go 1.16
 github.com/antlr/antlr4/runtime/Go/antlr
+# github.com/bufbuild/connect-go v0.1.1
+## explicit; go 1.18
+github.com/bufbuild/connect-go
+github.com/bufbuild/connect-go/internal/gen/connect/error/v1
+github.com/bufbuild/connect-go/internal/gen/connectext/grpc/status/v1
 # github.com/golang/protobuf v1.5.2
 ## explicit; go 1.9
 github.com/golang/protobuf/proto
@@ -27,17 +32,23 @@ github.com/google/cel-go/interpreter
 github.com/google/cel-go/interpreter/functions
 github.com/google/cel-go/parser
 github.com/google/cel-go/parser/gen
-# github.com/google/go-cmp v0.5.5
-## explicit; go 1.8
+# github.com/google/go-cmp v0.5.8
+## explicit; go 1.13
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/cmpopts
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
+# github.com/pkg/errors v0.9.1
+## explicit
 # github.com/stoewer/go-strcase v1.2.0
 ## explicit; go 1.11
 github.com/stoewer/go-strcase
+# github.com/twitchtv/twirp v8.1.2+incompatible
+## explicit
+github.com/twitchtv/twirp
+github.com/twitchtv/twirp/internal/contextkeys
 # golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 ## explicit; go 1.11
 golang.org/x/net/http/httpguts
@@ -57,10 +68,6 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-## explicit; go 1.11
-golang.org/x/xerrors
-golang.org/x/xerrors/internal
 # google.golang.org/genproto v0.0.0-20220414192740-2d67ff6cf2b4
 ## explicit; go 1.15
 google.golang.org/genproto/googleapis/api/expr/v1alpha1
