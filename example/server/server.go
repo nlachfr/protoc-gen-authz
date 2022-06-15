@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"github.com/Neakxs/protoc-gen-authz/authorize"
+	"github.com/Neakxs/protoc-gen-authz/authorize/interceptors"
 	v1 "github.com/Neakxs/protoc-gen-authz/example/service/v1"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
@@ -52,8 +53,8 @@ func main() {
 		panic(err)
 	}
 	srv := grpc.NewServer(
-		grpc.UnaryInterceptor(authzInterceptor.GetUnaryServerInterceptor()),
-		grpc.StreamInterceptor(authzInterceptor.GetStreamServerInterceptor()),
+		grpc.UnaryInterceptor(interceptors.NewGRPCUnaryInterceptor(authzInterceptor)),
+		grpc.StreamInterceptor(interceptors.NewGRPCStreamInterceptor(authzInterceptor)),
 	)
 	v1.RegisterOrgServiceServer(srv, &orgServer{})
 	dir, err := ioutil.TempDir("/tmp", "*")
