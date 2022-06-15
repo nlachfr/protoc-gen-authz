@@ -16,7 +16,7 @@ import (
 var _File_example_service_v1_org_service_proto_authzConfiguration = &authorize.FileRule{
 	Globals: &authorize.FileRule_Globals{
 		Functions: map[string]string{
-			"canPong": `xpong in context.metadata`,
+			"canPong": `xpong in headers`,
 		},
 		Constants: map[string]string{
 			"xpong": `x-pong`,
