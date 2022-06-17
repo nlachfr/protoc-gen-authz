@@ -33,7 +33,7 @@ func TestBuildAuthzProgramFromDesc(t *testing.T) {
 		},
 		{
 			Name:    "OK (get metadata)",
-			Expr:    `context.get("x-user") == ""`,
+			Expr:    `headers.get("x-user") == ""`,
 			WantErr: false,
 		},
 		{
@@ -122,7 +122,7 @@ func TestBuildAuthProgram(t *testing.T) {
 		},
 		{
 			Name:    "OK (get metadata)",
-			Expr:    `context.get("x-user") == ""`,
+			Expr:    `headers.get("x-user") == ""`,
 			WantErr: false,
 		},
 		{
