@@ -11,32 +11,6 @@ import (
 	v1alpha1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 )
 
-// func AuthorizationContextFromContext(ctx context.Context) *AuthorizationContext {
-// 	res := &AuthorizationContext{
-// 		Peer: &AuthorizationContext_Peer{
-// 			Addr:     "",
-// 			AuthInfo: "",
-// 		},
-// 		Metadata: make(map[string]*AuthorizationContext_MetadataValue),
-// 	}
-// 	if p, ok := peer.FromContext(ctx); ok {
-// 		if p.Addr != nil {
-// 			res.Peer.Addr = p.Addr.String()
-// 		}
-// 		if p.AuthInfo != nil {
-// 			res.Peer.AuthInfo = p.AuthInfo.AuthType()
-// 		}
-// 	}
-// 	if md, ok := metadata.FromIncomingContext(ctx); ok {
-// 		for k, v := range md {
-// 			res.Metadata[k] = &AuthorizationContext_MetadataValue{
-// 				Values: v,
-// 			}
-// 		}
-// 	}
-// 	return res
-// }
-
 func TypeFromOverloadType(t *FileRule_Overloads_Type) *v1alpha1.Type {
 	switch v := t.Type.(type) {
 	case *FileRule_Overloads_Type_Primitive_:
@@ -101,57 +75,3 @@ func (i *authzInterceptor) Authorize(ctx context.Context, method string, headers
 	}
 	return nil
 }
-
-// type AuthzInterceptor interface {
-// 	GetUnaryServerInterceptor() grpc.UnaryServerInterceptor
-// 	GetStreamServerInterceptor() grpc.StreamServerInterceptor
-// }
-
-// func NewAuthzInterceptor(methodProgramMapping map[string]cel.Program) AuthzInterceptor {
-// 	return &authzInterceptor{
-// 		methodProgramMapping: methodProgramMapping,
-// 	}
-// }
-
-// type authzInterceptor struct {
-// 	methodProgramMapping map[string]cel.Program
-// }
-
-// func (i *authzInterceptor) authorize(ctx context.Context, req interface{}, fullMethod string) error {
-// 	if pgr, ok := i.methodProgramMapping[fullMethod]; ok {
-// 		if message, ok := req.(proto.Message); ok {
-// 			val, _, err := pgr.ContextEval(ctx, map[string]interface{}{
-// 				"context": AuthorizationContextFromContext(ctx),
-// 				"request": message,
-// 			})
-// 			if err != nil {
-// 				return err
-// 			}
-// 			if !types.IsBool(val) {
-// 				return status.Error(codes.Unknown, "")
-// 			}
-// 			if !val.Value().(bool) {
-// 				return status.Error(codes.PermissionDenied, fmt.Sprintf(`Permission denied on "%s"`, fullMethod))
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
-
-// func (i *authzInterceptor) GetUnaryServerInterceptor() grpc.UnaryServerInterceptor {
-// 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-// 		if err := i.authorize(ctx, req, info.FullMethod); err != nil {
-// 			return nil, err
-// 		}
-// 		return handler(ctx, req)
-// 	}
-// }
-
-// func (i *authzInterceptor) GetStreamServerInterceptor() grpc.StreamServerInterceptor {
-// 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-// 		if err := i.authorize(ss.Context(), nil, info.FullMethod); err != nil {
-// 			return err
-// 		}
-// 		return handler(srv, ss)
-// 	}
-// }

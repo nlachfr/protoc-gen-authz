@@ -32,6 +32,11 @@ func TestBuildAuthzProgramFromDesc(t *testing.T) {
 			WantErr: false,
 		},
 		{
+			Name:    "OK (get metadata)",
+			Expr:    `context.get("x-user") == ""`,
+			WantErr: false,
+		},
+		{
 			Name: "OK (with constant)",
 			Expr: "request.ping == constPing",
 			Config: &FileRule{
@@ -113,6 +118,11 @@ func TestBuildAuthProgram(t *testing.T) {
 			Name:    "OK",
 			Expr:    `request.ping == "ping"`,
 			Config:  nil,
+			WantErr: false,
+		},
+		{
+			Name:    "OK (get metadata)",
+			Expr:    `context.get("x-user") == ""`,
 			WantErr: false,
 		},
 		{

@@ -16,7 +16,7 @@ import (
 var _File_example_service_v1_org_service_proto_authzConfiguration = &authorize.FileRule{
 	Globals: &authorize.FileRule_Globals{
 		Functions: map[string]string{
-			"canPong": `xpong in headers`,
+			"canPong": `headers.get("Xpong") == "yes"`,
 		},
 		Constants: map[string]string{
 			"xpong": `x-pong`,
@@ -61,7 +61,7 @@ func NewOrgServiceAuthzInterceptor(opts ...authorize.Options) (authorize.AuthzIn
 		expr string
 		req  proto.Message
 	}{
-		"/service.v1.OrgService/Ping": {expr: `do(ping, xpong) && !canPong() && size(request.ping) > 0`, req: &PingRequest{}},
+		"/service.v1.OrgService/Ping": {expr: `headers.get("ok") == "ok" && do(ping, xpong) && !canPong() && size(request.ping) > 0`, req: &PingRequest{}},
 		"/service.v1.OrgService/Pong": {expr: `canPong() && size(request.pong) > 0`, req: &PongRequest{}},
 	} {
 		if pgr, err := authorize.BuildAuthzProgram(v.expr, v.req, _File_example_service_v1_org_service_proto_authzConfiguration, lib); err != nil {

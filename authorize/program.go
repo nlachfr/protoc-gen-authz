@@ -2,10 +2,14 @@ package authorize
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/checker/decls"
+	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/interpreter"
+	"github.com/google/cel-go/interpreter/functions"
 	"github.com/google/cel-go/parser"
 	v1alpha1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/protobuf/proto"
@@ -37,6 +41,38 @@ func BuildAuthzProgram(expr string, msg proto.Message, config *FileRule, libs ..
 
 func buildAuthzProgram(expr string, desc protoreflect.MessageDescriptor, config *FileRule, envOpts ...cel.EnvOption) (cel.Program, error) {
 	envOpts = append(envOpts,
+		cel.Lib(&library{
+			envOpts: []cel.EnvOption{
+				cel.Declarations(
+					decls.NewFunction(
+						"get",
+						decls.NewInstanceOverload(
+							"get",
+							[]*v1alpha1.Type{
+								decls.NewMapType(
+									decls.String,
+									decls.NewListType(decls.String),
+								),
+								decls.String,
+							}, decls.String,
+						),
+					),
+				),
+			},
+			pgrOpts: []cel.ProgramOption{
+				cel.Functions(&functions.Overload{
+					Operator: "get",
+					Binary: func(lhs, rhs ref.Val) ref.Val {
+						if m, ok := lhs.Value().(map[string][]string); ok {
+							if s, ok := rhs.Value().(string); ok {
+								return types.String(http.Header(m).Get(s))
+							}
+						}
+						return types.String("")
+					},
+				}),
+			},
+		}),
 		cel.Declarations(
 			decls.NewVar(
 				"headers",
@@ -65,7 +101,7 @@ func buildAuthzProgram(expr string, desc protoreflect.MessageDescriptor, config 
 		for _, macro := range rawMacros {
 			ast, issues := env.Compile(config.Globals.Functions[macro])
 			if issues != nil && issues.Err() != nil {
-				return nil, issues.Err()
+				return nil, fmt.Errorf("macro error: %w", issues.Err())
 			}
 			macros = append(macros, parser.NewGlobalMacro(macro, 0, BuildMacroExpander(ast)))
 		}
