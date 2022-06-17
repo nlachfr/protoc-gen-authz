@@ -18,6 +18,14 @@ go install github.com/Neakxs/protoc-gen-authz/cmd/protoc-gen-go-authz
 
 The binary will be placed in your $GOBIN location.
 
+## About CEL Environment
+
+When writing rules, the following variables are avaible :
+- `headers` (**map[string][]string** type)
+- `request` (declared request message type)
+
+The `headers.get(string)` receiver function has been added on the `headers` variable. It allows writing of easier rules by using the go `func (http.Header) Get(string)` function under the hood.
+
 ## Usage
 
 1. Create protobuf definition
