@@ -11,7 +11,7 @@ option (authorize.file) = {
         functions: [
             {
                 key: 'canPong'
-                value: 'xpong in headers'
+                value: 'headers.get("Xpong") == "yes"'
             }
         ]
         constants: [

@@ -47,6 +47,9 @@ func translateMacroExpr(e *v1alpha1.Expr, eh parser.ExprHelper) *v1alpha1.Expr {
 		for i := 0; i < len(exp.CallExpr.Args); i++ {
 			args = append(args, translateMacroExpr(exp.CallExpr.Args[i], eh))
 		}
+		if exp.CallExpr.Target != nil {
+			return eh.ReceiverCall(exp.CallExpr.GetFunction(), translateMacroExpr(exp.CallExpr.Target, eh), args...)
+		}
 		return eh.GlobalCall(exp.CallExpr.GetFunction(), args...)
 	case *v1alpha1.Expr_ListExpr:
 		args := []*v1alpha1.Expr{}
