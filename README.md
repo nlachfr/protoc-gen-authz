@@ -44,7 +44,7 @@ option (authorize.file) = {
         functions: [
             {
                 key: 'canPong'
-                value: '"x-pong" in context.metadata'
+                value: '"X-Pong" in headers'
             }
         ]
     };
