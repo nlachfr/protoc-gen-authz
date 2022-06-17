@@ -61,7 +61,7 @@ option (authorize.file) = {
 
 service OrgService {
     rpc Ping(PingRequest) returns (google.protobuf.Empty) {
-        option (authorize.method).expr = 'do(ping, xpong) && !canPong() && size(request.ping) > 0';
+        option (authorize.method).expr = 'headers.get("ok") == "ok" && do(ping, xpong) && !canPong() && size(request.ping) > 0';
     };
     rpc Pong(PongRequest) returns (google.protobuf.Empty) {};
 }
