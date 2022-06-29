@@ -63,10 +63,17 @@ func buildAuthzProgram(expr string, desc protoreflect.MessageDescriptor, config 
 				cel.Functions(&functions.Overload{
 					Operator: "get",
 					Binary: func(lhs, rhs ref.Val) ref.Val {
-						if m, ok := lhs.Value().(map[string][]string); ok {
-							if s, ok := rhs.Value().(string); ok {
-								return types.String(http.Header(m).Get(s))
-							}
+						var h http.Header
+						switch m := lhs.Value().(type) {
+						case map[string][]string:
+							h = http.Header(m)
+						case http.Header:
+							h = m
+						default:
+							return types.String("")
+						}
+						if s, ok := rhs.Value().(string); ok {
+							return types.String(h.Get(s))
 						}
 						return types.String("")
 					},
