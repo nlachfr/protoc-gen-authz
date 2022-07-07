@@ -37,6 +37,11 @@ func TestBuildAuthzProgramFromDesc(t *testing.T) {
 			WantErr: false,
 		},
 		{
+			Name:    "OK (values metadata)",
+			Expr:    `size(headers.values("x-user")) == 0`,
+			WantErr: false,
+		},
+		{
 			Name: "OK (with constant)",
 			Expr: "request.ping == constPing",
 			Config: &FileRule{

@@ -57,6 +57,19 @@ func buildAuthzProgram(expr string, desc protoreflect.MessageDescriptor, config 
 							}, decls.String,
 						),
 					),
+					decls.NewFunction(
+						"values",
+						decls.NewInstanceOverload(
+							"values",
+							[]*v1alpha1.Type{
+								decls.NewMapType(
+									decls.String,
+									decls.NewListType(decls.String),
+								),
+								decls.String,
+							}, decls.NewListType(decls.String),
+						),
+					),
 				),
 			},
 			pgrOpts: []cel.ProgramOption{
@@ -74,6 +87,23 @@ func buildAuthzProgram(expr string, desc protoreflect.MessageDescriptor, config 
 						}
 						if s, ok := rhs.Value().(string); ok {
 							return types.String(h.Get(s))
+						}
+						return types.String("")
+					},
+				}, &functions.Overload{
+					Operator: "values",
+					Binary: func(lhs, rhs ref.Val) ref.Val {
+						var h http.Header
+						switch m := lhs.Value().(type) {
+						case map[string][]string:
+							h = http.Header(m)
+						case http.Header:
+							h = m
+						default:
+							return types.NewStringList(nil, []string{})
+						}
+						if s, ok := rhs.Value().(string); ok {
+							return types.NewStringList(TypeAdapterFunc(func(value interface{}) ref.Val { return types.String(value.(string)) }), h.Values(s))
 						}
 						return types.String("")
 					},
