@@ -1,3 +1,5 @@
+*DEPRECATED : This repository is no longer maintained and has been moved to the [protocel](https://github.com/Neakxs/protocel) repository.*
+
 # protoc-gen-authz
 
 [![Coverage](https://coveralls.io/repos/Neakxs/protoc-gen-authz/badge.svg?branch=main&service=github)](https://coveralls.io/github/Neakxs/protoc-gen-authz?branch=main) [![GoReportCard](https://goreportcard.com/badge/github.com/Neakxs/protoc-gen-authz)](https://goreportcard.com/badge/github.com/Neakxs/protoc-gen-authz) ![GitHub](https://img.shields.io/github/license/Neakxs/protoc-gen-authz)
